@@ -21,12 +21,13 @@ func main() {
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	port := flag.Int("port", 50051, "The server port")
+	port := flag.Int("port", 8080, "The server port")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()))
+	s := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 
 	pb.RegisterMatchFunctionServer(s, &p.MatchFunctionServer{
 		UnimplementedMatchFunctionServer: pb.UnimplementedMatchFunctionServer{},

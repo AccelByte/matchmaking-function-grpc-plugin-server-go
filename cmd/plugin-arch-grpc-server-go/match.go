@@ -6,6 +6,8 @@ package plugin_arch_grpc_server_go
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -32,13 +34,41 @@ func (x *matchFunctionMakeMatchesServer) Recv() (*pb.MakeMatchesRequest, error) 
 	return m, nil
 }
 
-func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, request *pb.GetStatCodesRequest) (*pb.StatCodesResponse, error) {
+func (x *matchFunctionMakeMatchesServer) StreamMatches() error {
+	for {
+		in, err := x.Recv()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			fmt.Printf("server: error receiving from stream: %v\n", err)
+			return err
+		}
+		logrus.Printf("echoing message %q", in.RequestType)
+
+		var tickets []*pb.Ticket
+		var teams []*pb.Match_Team
+		tickets = append(tickets, in.GetTicket())
+
+		errSend := x.Send(&pb.MatchResponse{Match: &pb.Match{
+			Tickets:           tickets,
+			Teams:             teams,
+			RegionPreferences: nil,
+			MatchAttributes:   nil,
+		}})
+		if errSend != nil {
+			return errSend
+		}
+	}
+}
+
+func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *pb.GetStatCodesRequest) (*pb.StatCodesResponse, error) {
 	codes := []string{"1", "2"}
 	logrus.Infof("stat codes: %s", codes)
 	return &pb.StatCodesResponse{Codes: codes}, nil
 }
 
-func (m *MatchFunctionServer) ValidateTickets(ctx context.Context, request *pb.ValidateTicketRequest) (*pb.ValidateTicketResponse, error) {
+func (m *MatchFunctionServer) ValidateTickets(ctx context.Context, req *pb.ValidateTicketRequest) (*pb.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
 	return &pb.ValidateTicketResponse{Valid: true}, nil
 }
