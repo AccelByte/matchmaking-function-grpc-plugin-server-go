@@ -11,10 +11,13 @@ import (
 	"net"
 
 	"github.com/sirupsen/logrus"
+
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+
 	"google.golang.org/grpc"
-	p "plugin-arch-grpc-server-go/cmd/plugin-arch-grpc-server-go"
+
 	"plugin-arch-grpc-server-go/pkg/pb"
+	"plugin-arch-grpc-server-go/pkg/server"
 )
 
 func main() {
@@ -29,10 +32,10 @@ func main() {
 	s := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 
-	pb.RegisterMatchFunctionServer(s, &p.MatchFunctionServer{
+	pb.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
 		UnimplementedMatchFunctionServer: pb.UnimplementedMatchFunctionServer{},
 	})
-	logrus.Printf("server listening at %v", lis.Addr())
+	logrus.Printf("gRPC server listening at %v", lis.Addr())
 
 	if err = s.Serve(lis); err != nil {
 		logrus.Fatalf("failed to serve: %v", err)

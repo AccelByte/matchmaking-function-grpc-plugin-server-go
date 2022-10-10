@@ -2,15 +2,18 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-package plugin_arch_grpc_server_go
+package server
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 
+	tp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
+
 	"plugin-arch-grpc-server-go/pkg/pb"
 )
 
@@ -31,6 +34,7 @@ func (x *matchFunctionMakeMatchesServer) Recv() (*pb.MakeMatchesRequest, error) 
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
+
 	return m, nil
 }
 
@@ -41,7 +45,8 @@ func (x *matchFunctionMakeMatchesServer) StreamMatches() error {
 			if err == io.EOF {
 				return nil
 			}
-			fmt.Printf("server: error receiving from stream: %v\n", err)
+			logrus.Print("server. error receiving from stream: ", err.Error())
+
 			return err
 		}
 		logrus.Printf("echoing message %q", in.RequestType)
@@ -65,19 +70,35 @@ func (x *matchFunctionMakeMatchesServer) StreamMatches() error {
 func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *pb.GetStatCodesRequest) (*pb.StatCodesResponse, error) {
 	codes := []string{"1", "2"}
 	logrus.Infof("stat codes: %s", codes)
+
 	return &pb.StatCodesResponse{Codes: codes}, nil
 }
 
 func (m *MatchFunctionServer) ValidateTickets(ctx context.Context, req *pb.ValidateTicketRequest) (*pb.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
+
 	return &pb.ValidateTicketResponse{Valid: true}, nil
 }
 
-func (m *MatchFunctionServer) MakeMatches(pb.MatchFunction_MakeMatchesServer) error {
+func (m *MatchFunctionServer) MakeMatches(server pb.MatchFunction_MakeMatchesServer) error {
+	in, err := server.Recv()
+	if err != nil {
+		logrus.Errorf("error during stream Recv: %s", err)
+
+		return err
+	}
+
+	_, ok := in.GetRequestType().(*pb.MakeMatchesRequest_Parameters)
+	if !ok {
+		logrus.Error("not a MakeMatchesRequest_Parameters type")
+
+		return errors.New("expected parameters in the first message were not met")
+	}
+
 	ticket := &pb.Ticket{
-		TicketId:         "foo",
+		TicketId:         GenerateUUID(),
 		MatchPool:        "bar",
-		CreatedAt:        nil,
+		CreatedAt:        &tp.Timestamp{Seconds: 10},
 		Players:          nil,
 		TicketAttributes: nil,
 		Latencies:        nil,
@@ -91,5 +112,6 @@ func (m *MatchFunctionServer) MakeMatches(pb.MatchFunction_MakeMatchesServer) er
 		MatchAttributes:   nil,
 	}
 	logrus.Infof("make match: %s", match)
+
 	return nil
 }

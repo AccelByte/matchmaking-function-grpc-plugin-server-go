@@ -2,14 +2,16 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-package plugin_arch_grpc_server_go
+package server
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"google.golang.org/grpc"
+
 	"plugin-arch-grpc-server-go/pkg/pb"
 )
 
