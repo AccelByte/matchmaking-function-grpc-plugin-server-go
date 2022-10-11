@@ -6,8 +6,11 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
+	tp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 
 	"google.golang.org/grpc"
@@ -23,8 +26,12 @@ func TestGetStatCodes(t *testing.T) {
 
 	// act
 	server := MatchFunctionServer{}
-	rules := &pb.Rules{Json: "foo"}
+
+	var rule interface{} // needs to add rule
+	dRules, _ := json.Marshal(rule)
+	rules := &pb.Rules{Json: string(dRules)}
 	codes := []string{"1", "2"}
+
 	a := &pb.GetStatCodesRequest{Rules: rules}
 	ok, err := server.GetStatCodes(ctx, a)
 
@@ -43,10 +50,13 @@ func TestValidateTicket(t *testing.T) {
 
 	// act
 	server := MatchFunctionServer{}
-	rules := &pb.Rules{Json: "foo"}
+
+	var rule interface{}
+	dRules, _ := json.Marshal(rule)
+	rules := &pb.Rules{Json: string(dRules)}
 	ticket := &pb.Ticket{
-		TicketId:  "foo",
-		MatchPool: "bar",
+		TicketId:  GenerateUUID(),
+		MatchPool: "",
 	}
 	a := &pb.ValidateTicketRequest{
 		Ticket: ticket,
@@ -65,12 +75,42 @@ func TestMatch(t *testing.T) {
 	// prepare
 	s := grpc.NewServer()
 
+	r := GameRules{
+		ShipCountMin: 0,
+		ShipCountMax: 1,
+	}
+
+	var players []*pb.Ticket_PlayerData
+	for i := 1; i <= 4; i++ {
+		p := &pb.Ticket_PlayerData{
+			PlayerId:   fmt.Sprintf("player%d", i),
+			Attributes: nil,
+		}
+		players = append(players, p)
+	}
+
+	ticket := pb.Ticket{
+		TicketId:         GenerateUUID(),
+		MatchPool:        "",
+		CreatedAt:        &tp.Timestamp{Seconds: 10},
+		Players:          players,
+		TicketAttributes: nil,
+		Latencies:        nil,
+	}
+
 	// act
-	server := MatchFunctionServer{}
-	var stream grpc.ServerStream
-	err := server.MakeMatches(&matchFunctionMakeMatchesServer{stream})
+	var tickets []pb.Ticket
+	results := make([]Match, 0)
+	tickets = append(tickets, ticket)
+	server := MatchMaker{unmatchedTickets: tickets}
+	matches := server.MakeMatches(r)
+
+	for match := range matches {
+		results = append(results, match)
+	}
 
 	// assert
 	assert.NotNil(t, s)
-	assert.Nil(t, err)
+	assert.Equal(t, 1, len(results))
+	assert.Equal(t, 4, len(players))
 }

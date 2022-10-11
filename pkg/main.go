@@ -32,8 +32,11 @@ func main() {
 	s := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 
+	matchMaker := server.New()
+
 	pb.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
 		UnimplementedMatchFunctionServer: pb.UnimplementedMatchFunctionServer{},
+		MatchMaker:                       matchMaker,
 	})
 	logrus.Printf("gRPC server listening at %v", lis.Addr())
 

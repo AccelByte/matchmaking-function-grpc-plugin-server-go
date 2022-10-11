@@ -7,17 +7,13 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/emicklei/go-restful"
 	"github.com/google/uuid"
 	"github.com/parnurzeal/gorequest"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	testNamespace        = "sdktestnamespace"
-	encodedAdminClientID = "MDY0MzMxNTk0MDMwNDhkNDhkOWRmNzY2MTIxYjVhOWI6SmZSMkh1RWlDLEF3Z3daZ1djQVlkR0xiY2xCd2QlNEU="
 )
 
 func ValidateAuth(authorization []string) bool {
@@ -36,7 +32,9 @@ func GenerateUUID() string {
 	return strings.ReplaceAll(id.String(), "-", "")
 }
 
-func GetAppToken(username string, password string) string {
+func GetToken(username string, password string) string {
+	testNamespace := os.Getenv("AB_NAMESPACE")
+	encodedAdminClientID := os.Getenv("ENCODED_CLIENT_ID")
 	url := "https://demo.accelbyte.io/iam/v3/oauth/token"
 	data := fmt.Sprintf("grant_type=password&username=%s&password=%s&namespace=%s", username, password, testNamespace)
 

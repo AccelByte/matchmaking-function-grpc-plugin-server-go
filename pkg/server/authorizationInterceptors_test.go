@@ -5,6 +5,7 @@
 package server
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,12 +14,12 @@ import (
 func Test_GetAppToken(t *testing.T) {
 	/*
 		url := "https://demo.accelbyte.io/iam/v3/oauth/token"
-		data := fmt.Sprintf("grant_type=password&username=%s&password=%s&namespace=%s", "serversdk_user2@dummy.com", "ffd$2e3ebb6fe64cb7b9f9$5486692ad", testNamespace)
+		data := fmt.Sprintf("grant_type=password&username=%s&password=%s&namespace=%s", os.Getenv("AB_USERNAME"), os.Getenv("AB_PASSWORD"), TestNamespace)
 
 		result := struct {
 			Token string `json:"access_token"`
 		}{}
-		authorization := fmt.Sprintf("Basic %s", encodedAdminClientID)
+		authorization := fmt.Sprintf("Basic %s", EncodedAdminClientID)
 		resp, _, errs := gorequest.New().
 			Post(url).
 			Set("Authorization", authorization).
@@ -32,7 +33,7 @@ func Test_GetAppToken(t *testing.T) {
 		}
 	*/
 
-	token := GetAppToken("serversdk_user2@dummy.com", "ffd$2e3ebb6fe64cb7b9f9$5486692ad")
+	token := GetToken(os.Getenv("AB_USERNAME"), os.Getenv("AB_PASSWORD"))
 
 	assert.NotNil(t, token)
 

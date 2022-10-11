@@ -7,64 +7,16 @@ package server
 import (
 	"context"
 	"errors"
-	"io"
+	"sync"
 
-	tp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/sirupsen/logrus"
-
-	"google.golang.org/grpc"
 
 	"plugin-arch-grpc-server-go/pkg/pb"
 )
 
 type MatchFunctionServer struct {
 	pb.UnimplementedMatchFunctionServer
-}
-
-type matchFunctionMakeMatchesServer struct {
-	grpc.ServerStream
-}
-
-func (x *matchFunctionMakeMatchesServer) Send(m *pb.MatchResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *matchFunctionMakeMatchesServer) Recv() (*pb.MakeMatchesRequest, error) {
-	m := new(pb.MakeMatchesRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func (x *matchFunctionMakeMatchesServer) StreamMatches() error {
-	for {
-		in, err := x.Recv()
-		if err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			logrus.Print("server. error receiving from stream: ", err.Error())
-
-			return err
-		}
-		logrus.Printf("echoing message %q", in.RequestType)
-
-		var tickets []*pb.Ticket
-		var teams []*pb.Match_Team
-		tickets = append(tickets, in.GetTicket())
-
-		errSend := x.Send(&pb.MatchResponse{Match: &pb.Match{
-			Tickets:           tickets,
-			Teams:             teams,
-			RegionPreferences: nil,
-			MatchAttributes:   nil,
-		}})
-		if errSend != nil {
-			return errSend
-		}
-	}
+	MatchMaker MatchLogic
 }
 
 func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *pb.GetStatCodesRequest) (*pb.StatCodesResponse, error) {
@@ -88,30 +40,46 @@ func (m *MatchFunctionServer) MakeMatches(server pb.MatchFunction_MakeMatchesSer
 		return err
 	}
 
-	_, ok := in.GetRequestType().(*pb.MakeMatchesRequest_Parameters)
+	mrpT, ok := in.GetRequestType().(*pb.MakeMatchesRequest_Parameters)
 	if !ok {
 		logrus.Error("not a MakeMatchesRequest_Parameters type")
 
 		return errors.New("expected parameters in the first message were not met")
 	}
 
-	ticket := &pb.Ticket{
-		TicketId:         GenerateUUID(),
-		MatchPool:        "bar",
-		CreatedAt:        &tp.Timestamp{Seconds: 10},
-		Players:          nil,
-		TicketAttributes: nil,
-		Latencies:        nil,
+	rules, err := m.MatchMaker.RulesFromJSON(mrpT.Parameters.Rules.Json)
+	if err != nil {
+		logrus.Errorf("could not get rules from json: %s", err)
+
+		return err
 	}
-	var tickets []*pb.Ticket
-	tickets = append(tickets, ticket)
-	match := &pb.Match{
-		Tickets:           tickets,
-		Teams:             nil,
-		RegionPreferences: nil,
-		MatchAttributes:   nil,
-	}
-	logrus.Infof("make match: %s", match)
+	logrus.Infof("rules: %s", rules)
+
+	resultChan := m.MatchMaker.MakeMatches(rules)
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for result := range resultChan {
+			logrus.Info("creating a match")
+			match := &pb.Match{
+				Tickets:           result.Tickets,
+				RegionPreferences: nil,
+				MatchAttributes:   nil,
+			}
+			resp := pb.MatchResponse{Match: match}
+			if sErr := server.Send(&resp); err != nil {
+				logrus.Errorf("error on server send: %s", sErr)
+
+				return
+			}
+		}
+	}()
+	wg.Wait()
+
+	logrus.Info("make match")
 
 	return nil
 }
