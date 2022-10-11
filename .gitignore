@@ -50,3 +50,6 @@ Thumbs.db
 
 # Go cache
 .cache/
+
+# Environment files
+.env
