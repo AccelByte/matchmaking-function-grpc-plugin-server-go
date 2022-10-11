@@ -19,11 +19,11 @@ lint:
 
 build:
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go run cmd/main.go"
+		sh -c "go run pkg/main.go"
 
 test:
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go test plugin-arch-grpc-server-go/cmd/plugin-arch-grpc-server-go"
+		sh -c "go test plugin-arch-grpc-server-go/pkg/server"
 
 proto:
 	protoc --proto_path=pkg/proto --go_out=pkg/pb \
