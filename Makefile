@@ -6,8 +6,6 @@ SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.16
 
-.PHONY: build test
-
 lint:
 	rm -f lint.err
 	find -type f -iname go.mod -exec dirname {} \; | while read DIRECTORY; do \
@@ -19,7 +17,7 @@ lint:
 
 build:
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go run pkg/main.go"
+		sh -c "go build"
 
 test:
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
