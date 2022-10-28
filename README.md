@@ -7,7 +7,7 @@ This demo requires Go 1.16 (minimum) to be installed.
 
 ```bash
 # run
-$ go run cmd/main.go
+$ go run main.go
 
 # test
 $ go test plugin-arch-grpc-server-go/cmd/plugin-arch-grpc-server-go

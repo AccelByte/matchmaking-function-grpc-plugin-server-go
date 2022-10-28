@@ -6,9 +6,15 @@ SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.16
 
-.PHONY: build test
+proto:
+	rm -rfv pkg/pb/*
+	mkdir -p pkg/pb
+	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ rvolosatovs/protoc:3.3.0 \
+			--proto_path=pkg/proto --go_out=pkg/pb \
+			--go_opt=paths=source_relative --go-grpc_out=pkg/pb \
+			--go-grpc_opt=paths=source_relative pkg/proto/*.proto
 
-lint:
+lint: proto
 	rm -f lint.err
 	find -type f -iname go.mod -exec dirname {} \; | while read DIRECTORY; do \
 		echo "# $$DIRECTORY"; \
@@ -17,15 +23,12 @@ lint:
 	done
 	[ ! -f lint.err ] || (rm lint.err && exit 1)
 
-build:
+build: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go run pkg/main.go"
+		sh -c "go build"
 
-test:
+test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
 		sh -c "go test plugin-arch-grpc-server-go/pkg/server"
 
-proto:
-	protoc --proto_path=pkg/proto --go_out=pkg/pb \
-	--go_opt=paths=source_relative --go-grpc_out=pkg/pb \
-	--go-grpc_opt=paths=source_relative pkg/proto/*.proto
+
