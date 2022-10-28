@@ -15,7 +15,15 @@ lint:
 	done
 	[ ! -f lint.err ] || (rm lint.err && exit 1)
 
-build:
+proto:
+	rm -rfv pkg/pb/*
+	mkdir -p pkg/pb
+	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ rvolosatovs/protoc:3.3.0 \
+			--proto_path=pkg/proto --go_out=pkg/pb \
+			--go_opt=paths=source_relative --go-grpc_out=pkg/pb \
+			--go-grpc_opt=paths=source_relative pkg/proto/*.proto
+
+build: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
 		sh -c "go build"
 
@@ -23,7 +31,4 @@ test:
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
 		sh -c "go test plugin-arch-grpc-server-go/pkg/server"
 
-proto:
-	protoc --proto_path=pkg/proto --go_out=pkg/pb \
-	--go_opt=paths=source_relative --go-grpc_out=pkg/pb \
-	--go-grpc_opt=paths=source_relative pkg/proto/*.proto
+
