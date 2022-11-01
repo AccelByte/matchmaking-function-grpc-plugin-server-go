@@ -13,9 +13,9 @@ import (
 	tp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 
-	"google.golang.org/grpc"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
-	"plugin-arch-grpc-server-go/pkg/pb"
+	"google.golang.org/grpc"
 )
 
 func TestGetStatCodes(t *testing.T) {
@@ -29,10 +29,10 @@ func TestGetStatCodes(t *testing.T) {
 
 	var rule interface{} // needs to add rule
 	dRules, _ := json.Marshal(rule)
-	rules := &pb.Rules{Json: string(dRules)}
-	codes := []string{"1", "2"}
+	rules := &matchfunctiongrpc.Rules{Json: string(dRules)}
+	codes := []string{"2", "2"}
 
-	a := &pb.GetStatCodesRequest{Rules: rules}
+	a := &matchfunctiongrpc.GetStatCodesRequest{Rules: rules}
 	ok, err := server.GetStatCodes(ctx, a)
 
 	// assert
@@ -53,16 +53,16 @@ func TestValidateTicket(t *testing.T) {
 
 	var rule interface{}
 	dRules, _ := json.Marshal(rule)
-	rules := &pb.Rules{Json: string(dRules)}
-	ticket := &pb.Ticket{
+	rules := &matchfunctiongrpc.Rules{Json: string(dRules)}
+	ticket := &matchfunctiongrpc.Ticket{
 		TicketId:  GenerateUUID(),
 		MatchPool: "",
 	}
-	a := &pb.ValidateTicketRequest{
+	a := &matchfunctiongrpc.ValidateTicketRequest{
 		Ticket: ticket,
 		Rules:  rules,
 	}
-	ok, err := server.ValidateTickets(ctx, a)
+	ok, err := server.ValidateTicket(ctx, a)
 
 	// assert
 	assert.NotNil(t, s)
@@ -80,16 +80,16 @@ func TestMatch(t *testing.T) {
 		ShipCountMax: 1,
 	}
 
-	var players []*pb.Ticket_PlayerData
+	var players []*matchfunctiongrpc.Ticket_PlayerData
 	for i := 1; i <= 4; i++ {
-		p := &pb.Ticket_PlayerData{
+		p := &matchfunctiongrpc.Ticket_PlayerData{
 			PlayerId:   fmt.Sprintf("player%d", i),
 			Attributes: nil,
 		}
 		players = append(players, p)
 	}
 
-	ticket := pb.Ticket{
+	ticket := matchfunctiongrpc.Ticket{
 		TicketId:         GenerateUUID(),
 		MatchPool:        "",
 		CreatedAt:        &tp.Timestamp{Seconds: 10},
@@ -99,7 +99,7 @@ func TestMatch(t *testing.T) {
 	}
 
 	// act
-	var tickets []pb.Ticket
+	var tickets []matchfunctiongrpc.Ticket
 	results := make([]Match, 0)
 	tickets = append(tickets, ticket)
 	server := MatchMaker{unmatchedTickets: tickets}

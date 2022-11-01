@@ -6,33 +6,34 @@ package server
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 
-	"plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 )
 
 type MatchFunctionServer struct {
-	pb.UnimplementedMatchFunctionServer
+	matchfunctiongrpc.UnimplementedMatchFunctionServer
 	MatchMaker MatchLogic
 }
 
-func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *pb.GetStatCodesRequest) (*pb.StatCodesResponse, error) {
-	codes := []string{"1", "2"}
+func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfunctiongrpc.GetStatCodesRequest) (*matchfunctiongrpc.StatCodesResponse, error) {
+	codes := []string{"2", "2"}
 	logrus.Infof("stat codes: %s", codes)
 
-	return &pb.StatCodesResponse{Codes: codes}, nil
+	return &matchfunctiongrpc.StatCodesResponse{Codes: codes}, nil
 }
 
-func (m *MatchFunctionServer) ValidateTickets(ctx context.Context, req *pb.ValidateTicketRequest) (*pb.ValidateTicketResponse, error) {
+func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
 
-	return &pb.ValidateTicketResponse{Valid: true}, nil
+	return &matchfunctiongrpc.ValidateTicketResponse{Valid: true}, nil
 }
 
-func (m *MatchFunctionServer) MakeMatches(server pb.MatchFunction_MakeMatchesServer) error {
+func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
+	logrus.Info("make matches")
 	in, err := server.Recv()
 	if err != nil {
 		logrus.Errorf("error during stream Recv: %s", err)
@@ -40,11 +41,11 @@ func (m *MatchFunctionServer) MakeMatches(server pb.MatchFunction_MakeMatchesSer
 		return err
 	}
 
-	mrpT, ok := in.GetRequestType().(*pb.MakeMatchesRequest_Parameters)
+	mrpT, ok := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters)
 	if !ok {
 		logrus.Error("not a MakeMatchesRequest_Parameters type")
 
-		return errors.New("expected parameters in the first message were not met")
+		return fmt.Errorf("expected parameters in the first message were not met")
 	}
 
 	rules, err := m.MatchMaker.RulesFromJSON(mrpT.Parameters.Rules.Json)
@@ -64,12 +65,12 @@ func (m *MatchFunctionServer) MakeMatches(server pb.MatchFunction_MakeMatchesSer
 		defer wg.Done()
 		for result := range resultChan {
 			logrus.Info("creating a match")
-			match := &pb.Match{
+			match := &matchfunctiongrpc.Match{
 				Tickets:           result.Tickets,
 				RegionPreferences: nil,
 				MatchAttributes:   nil,
 			}
-			resp := pb.MatchResponse{Match: match}
+			resp := matchfunctiongrpc.MatchResponse{Match: match}
 			if sErr := server.Send(&resp); err != nil {
 				logrus.Errorf("error on server send: %s", sErr)
 

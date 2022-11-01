@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
-	"plugin-arch-grpc-server-go/pkg/pb"
+	"github.com/sirupsen/logrus"
 )
 
 func New() MatchLogic {
@@ -18,17 +18,17 @@ func New() MatchLogic {
 }
 
 type MatchMaker struct {
-	unmatchedTickets []pb.Ticket
+	unmatchedTickets []matchfunctiongrpc.Ticket
 }
 
 type MatchLogic interface {
 	MakeMatches(matchRules interface{}) <-chan Match
 	RulesFromJSON(json string) (interface{}, error)
 	GetStatCodes(matchRules interface{}) []string
-	ValidateTicket(ticket *pb.Ticket, matchRules interface{}) (bool, error)
+	ValidateTicket(matchRules interface{}) (bool, error)
 }
 
-func (b MatchMaker) ValidateTicket(ticket *pb.Ticket, matchRules interface{}) (bool, error) {
+func (b MatchMaker) ValidateTicket(matchRules interface{}) (bool, error) {
 	return true, nil
 }
 
@@ -66,7 +66,7 @@ func (b MatchMaker) MakeMatches(matchRules interface{}) <-chan Match {
 	go func() {
 		defer close(results)
 
-		unmatchedTickets := make([]*pb.Ticket, 0, int(ruleSet.ShipCountMax))
+		unmatchedTickets := make([]*matchfunctiongrpc.Ticket, 0, int(ruleSet.ShipCountMax))
 		if len(unmatchedTickets) == int(ruleSet.ShipCountMax) {
 			match := buildMatch(unmatchedTickets)
 			results <- match
@@ -81,13 +81,13 @@ func (b MatchMaker) MakeMatches(matchRules interface{}) <-chan Match {
 }
 
 type Match struct {
-	Tickets           []*pb.Ticket
-	Teams             []pb.Match_Team
+	Tickets           []*matchfunctiongrpc.Ticket
+	Teams             []matchfunctiongrpc.Match_Team
 	RegionPreferences []string
 	MatchAttributes   map[string]interface{}
 }
 
-func buildMatch(unmatchedTickets []*pb.Ticket) Match {
+func buildMatch(unmatchedTickets []*matchfunctiongrpc.Ticket) Match {
 	match := Match{
 		RegionPreferences: []string{},
 		Tickets:           unmatchedTickets,

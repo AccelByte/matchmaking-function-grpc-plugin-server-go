@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -25,19 +24,18 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
-	"google.golang.org/grpc"
-
-	"plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 	"plugin-arch-grpc-server-go/pkg/server"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
-	service     = "trace-server"
+	service     = "custommatchmakingfunctiongoserver"
 	environment = "production"
 	id          = 1
 )
-
-var port = flag.Int("port", 8080, "The server port")
 
 func main() {
 	tp, err := tracerProvider("http://localhost:14268/api/traces")
@@ -68,11 +66,12 @@ func main() {
 
 	tr := tp.Tracer("server-component-main")
 
-	ctx, span := tr.Start(ctx, "abc")
+	_, span := tr.Start(ctx, "main")
 	span.End()
 
 	flag.Parse()
 
+	port := flag.Int("port", 6565, "The server port")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
@@ -84,9 +83,8 @@ func main() {
 
 	matchMaker := server.New()
 
-	pb.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
-		UnimplementedMatchFunctionServer: pb.UnimplementedMatchFunctionServer{},
-		MatchMaker:                       matchMaker,
+	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
+		MatchMaker: matchMaker,
 	})
 	logrus.Printf("gRPC server listening at %v", lis.Addr())
 
@@ -116,5 +114,6 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 			attribute.Int64("ID", id),
 		)),
 	)
+
 	return tp, nil
 }
