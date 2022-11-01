@@ -1,0 +1,50 @@
+receivers:
+  zipkin:
+
+exporters:  
+  logging:
+    loglevel: debug
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure: true
+
+processors:
+  batch:
+  tail_sampling:
+    policies:
+      - type: string_attribute
+        string_attribute:
+          key: http.target
+          values:
+            - ^\/(?:metrics\/.*|health.*|actuator\/.*)$
+          enabled_regex_matching: true
+          invert_match: true
+      - type: status_code
+        status_code:
+          status_codes:
+            - ERROR
+      - type: latency
+        latency:
+          threshold_ms: 5000
+      - type: probabilistic
+        probabilistic:
+          sampling_percentage: 100
+
+service:
+  telemetry:
+    logs:
+      level: "info"
+  pipelines:
+    traces:
+      receivers: [zipkin]
+      processors: [batch,tail_sampling]
+      exporters: [logging,jaeger,otlp/tempo]
