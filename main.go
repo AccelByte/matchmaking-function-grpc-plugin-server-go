@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -21,8 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
-
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"google.golang.org/grpc/metadata"
 
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 	"plugin-arch-grpc-server-go/pkg/server"
@@ -76,8 +75,18 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			otelgrpc.UnaryServerInterceptor(),
+			ensureValidToken,
+		),
+		grpc.ChainStreamInterceptor(
+			otelgrpc.StreamServerInterceptor(),
+		),
+	}
+
+	s := grpc.NewServer(opts...)
 
 	reflection.Register(s) // self documentation for the server
 
@@ -116,4 +125,18 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 	)
 
 	return tp, nil
+}
+
+func ensureValidToken(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("error missing metadata")
+	}
+	// The keys within metadata.MD are normalized to lowercase.
+	// See: https://godoc.org/google.golang.org/grpc/metadata#New
+	if !server.ValidateAuth(md["authorization"]) {
+		return nil, fmt.Errorf("error invalid token")
+	}
+	// Continue execution of handler after ensuring a valid token.
+	return handler(ctx, req)
 }
