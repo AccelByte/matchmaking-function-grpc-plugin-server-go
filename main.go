@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -21,6 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/examples/data"
 	"google.golang.org/grpc/metadata"
 
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
@@ -76,6 +79,11 @@ func main() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 
+	cert, err := tls.LoadX509KeyPair(data.Path("x509/server_cert.pem"), data.Path("x509/server_key.pem"))
+	if err != nil {
+		log.Fatalf("failed to load key pair: %s", err)
+	}
+
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			otelgrpc.UnaryServerInterceptor(),
@@ -84,6 +92,7 @@ func main() {
 		grpc.ChainStreamInterceptor(
 			otelgrpc.StreamServerInterceptor(),
 		),
+		grpc.Creds(credentials.NewServerTLSFromCert(&cert)),
 	}
 
 	s := grpc.NewServer(opts...)

@@ -18,6 +18,8 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
+require google.golang.org/grpc/examples v0.0.0-20221102000843-040b795b51ea
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elazarl/goproxy v0.0.0-20220901064549-fbd10ff4f5a1 // indirect
@@ -32,7 +34,7 @@ require (
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/text v0.3.3 // indirect
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl v1.0.0 // indirect
 )

@@ -22,7 +22,7 @@ func ValidateAuth(authorization []string) bool {
 	}
 	token := strings.TrimPrefix(authorization[0], "Bearer ")
 
-	return token == "foo"
+	return token == "some-secret-token"
 }
 
 // GenerateUUID generates uuid without hyphens
