@@ -129,9 +129,86 @@ func TokenValidator(accessToken string) bool {
 		}
 	}
 
+	// validate token permission
+	requiredPermission := Permission{
+		Resource: "NAMESPACE:{namespace}:{resource_name}",
+		Action:   2,
+	}
+
+	permissionResources := make(map[string]string, 0)
+	permissionResources["{namespace}"] = jwtClaims.Namespace
+
+	for placeholder, value := range permissionResources {
+		requiredPermission.Resource = strings.Replace(requiredPermission.Resource, placeholder, value, 1)
+	}
+
+	for _, grantedPermission := range jwtClaims.Permissions {
+		grantedAction := grantedPermission.Action
+		if resourceAllowed(grantedPermission.Resource, requiredPermission.Resource) &&
+			actionAllowed(grantedAction, requiredPermission.Action) {
+			return true
+		}
+	}
+
+	logrus.Info("ValidatePermission: permission allowed to access resource")
+
 	logrus.Info("JWT validated.")
 
 	return true
+}
+
+func resourceAllowed(accessPermissionResource string, requiredPermissionResource string) bool {
+	requiredPermResSections := strings.Split(requiredPermissionResource, ":")
+	requiredPermResSectionLen := len(requiredPermResSections)
+	accessPermResSections := strings.Split(accessPermissionResource, ":")
+	accessPermResSectionLen := len(accessPermResSections)
+
+	minSectionLen := accessPermResSectionLen
+	if minSectionLen > requiredPermResSectionLen {
+		minSectionLen = requiredPermResSectionLen
+	}
+
+	for i := 0; i < minSectionLen; i++ {
+		userSection := accessPermResSections[i]
+		requiredSection := requiredPermResSections[i]
+
+		if userSection != requiredSection && userSection != "*" {
+			return false
+		}
+	}
+
+	if accessPermResSectionLen == requiredPermResSectionLen {
+		return true
+	}
+
+	if accessPermResSectionLen < requiredPermResSectionLen {
+		if accessPermResSections[accessPermResSectionLen-1] == "*" {
+			if accessPermResSectionLen < 2 {
+				return true
+			}
+
+			segment := accessPermResSections[accessPermResSectionLen-2]
+			if segment == "NAMESPACE" || segment == "USER" {
+				return false
+			}
+
+			return true
+		}
+
+		return false
+	}
+
+	for i := requiredPermResSectionLen; i < accessPermResSectionLen; i++ {
+		if accessPermResSections[i] != "*" {
+			return false
+		}
+	}
+
+	return true
+}
+
+func actionAllowed(grantedAction int, requiredAction int) bool {
+	return grantedAction&requiredAction == requiredAction
 }
 
 func fetchJWKS() error {
