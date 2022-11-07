@@ -2,10 +2,8 @@ module plugin-arch-grpc-server-go
 
 go 1.18
 
-replace github.com/AccelByte/accelbyte-go-sdk => /home/ruli@accelbyte.net/Workspace/Bitbucket/justice-codegen-go-sdk
-
 require (
-	github.com/AccelByte/accelbyte-go-sdk v0.30.0
+	github.com/AccelByte/accelbyte-go-sdk v0.31.0
 	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/golang/protobuf v1.5.2
@@ -23,10 +21,12 @@ require (
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/grpc/examples v0.0.0-20221102000843-040b795b51ea
 )
 
 require (
+	cloud.google.com/go v0.34.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
@@ -59,6 +59,7 @@ require (
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/text v0.3.5 // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -6,9 +6,12 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -20,25 +23,43 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	"github.com/AccelByte/bloom"
 	"github.com/AccelByte/go-jose/jwt"
-	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
+const defaultKey = "default"
+
 var (
-	jwtEncoding  = base64.URLEncoding.WithPadding(base64.NoPadding)
-	keys         = make(map[string]*rsa.PublicKey)
-	revokedUsers = make(map[string]time.Time)
-	jwtClaims    = JWTClaims{}
-	configRepo   = *auth.DefaultConfigRepositoryImpl()
-	tokenRepo    = *auth.DefaultTokenRepositoryImpl()
-	oauthService = &iam.OAuth20Service{
+	jwtEncoding     = base64.URLEncoding.WithPadding(base64.NoPadding)
+	keys            = make(map[string]*rsa.PublicKey)
+	getJWKSV3Cached *iamclientmodels.OauthcommonJWKSet
+	revokedUsers    = make(map[string]time.Time)
+	jwtClaims       = JWTClaims{}
+	configRepo      = *auth.DefaultConfigRepositoryImpl()
+	tokenRepo       = *auth.DefaultTokenRepositoryImpl()
+	oauthService    = &iam.OAuth20Service{
 		Client:           factory.NewIamClient(&configRepo),
 		ConfigRepository: &configRepo,
 		TokenRepository:  &tokenRepo,
 	}
 )
+
+func EnsureValidToken(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("error missing metadata")
+	}
+	// The keys within metadata.MD are normalized to lowercase.
+	// See: https://godoc.org/google.golang.org/grpc/metadata#New
+	if !ValidateAuth(md["authorization"]) {
+		return nil, fmt.Errorf("error invalid token")
+	}
+	// Continue execution of handler after ensuring a valid token.
+	return handler(ctx, req)
+}
 
 func ValidateAuth(authorization []string) bool {
 	if len(authorization) < 1 {
@@ -75,14 +96,15 @@ func TokenValidator(accessToken string) bool {
 	}
 
 	// fetch jwks key using public key
-	errFetchJWKS := fetchJWKS()
-	if errFetchJWKS != nil {
+	if errFetchJWKS := fetchJWKS(); errFetchJWKS != nil {
 		logrus.Error(errFetchJWKS)
 
 		return false
 	}
+	keysValue, _ := json.Marshal(*getJWKSV3Cached)
+	logrus.Infof("JWKS keys fetched. %v", string(keysValue))
 	if keys == nil {
-		logrus.Error("public key to validate is nil")
+		logrus.Error("public key to validate is nil.")
 
 		return false
 	}
@@ -90,10 +112,11 @@ func TokenValidator(accessToken string) bool {
 	// claims
 	errClaims := parsedSignedToken.Claims(keys[parsedSignedToken.Headers[0].KeyID], &jwtClaims)
 	if errClaims != nil {
-		logrus.Error(errClaims)
+		logrus.Error("error when claimed the parsed signed token. ", errClaims)
 
 		return false
 	}
+	logrus.Info("successfully claim the parsed signed token.")
 
 	// checks expiration time
 	err = jwtClaims.Validate()
@@ -115,6 +138,7 @@ func TokenValidator(accessToken string) bool {
 
 		return false
 	}
+	logrus.Info("get revocation list.")
 
 	// check if user is in revocation list
 	for userID, revokedAt := range revokedUsers {
@@ -124,7 +148,7 @@ func TokenValidator(accessToken string) bool {
 			return false
 		}
 		if revokedAt.Unix() >= int64(jwtClaims.IssuedAt) {
-			logrus.Error("token is revoked because of issued time")
+			logrus.Error("token is revoked. please renew the token.")
 
 			return false
 		}
@@ -136,7 +160,7 @@ func TokenValidator(accessToken string) bool {
 		Action:   2,
 	}
 
-	permissionResources := make(map[string]string, 0)
+	permissionResources := make(map[string]string)
 	permissionResources["{namespace}"] = jwtClaims.Namespace
 	for placeholder, value := range permissionResources {
 		requiredPermission.Resource = strings.Replace(requiredPermission.Resource, placeholder, value, 1)
@@ -145,7 +169,7 @@ func TokenValidator(accessToken string) bool {
 	for _, grantedPermission := range jwtClaims.Permissions {
 		grantedAction := grantedPermission.Action
 		if !resourceAllowed(grantedPermission.Resource, requiredPermission.Resource) &&
-			actionAllowed(grantedAction, requiredPermission.Action) {
+			!actionAllowed(grantedAction, requiredPermission.Action) {
 			return false
 		}
 	}
@@ -219,10 +243,9 @@ func fetchJWKS() error {
 
 	// stored as a cache
 	c := cache.New(5*time.Minute, 10*time.Minute)
-	c.Set("default", getJWKSV3, cache.DefaultExpiration)
+	c.Set(defaultKey, getJWKSV3, cache.DefaultExpiration)
 
-	var getJWKSV3Cached *iamclientmodels.OauthcommonJWKSet
-	if x, found := c.Get("default"); found {
+	if x, found := c.Get(defaultKey); found {
 		getJWKSV3Cached = x.(*iamclientmodels.OauthcommonJWKSet)
 		for _, key := range getJWKSV3Cached.Keys {
 			publicKey, errGenerate := generatePublicKey(key)
@@ -297,30 +320,14 @@ func getRevocationList(accessToken string) error {
 		return err
 	}
 
-	// saved it in a cache
-	c := cache.New(5*time.Minute, 10*time.Minute)
-	c.Set("default", revocationList, cache.DefaultExpiration)
+	// revoked token
+	filter := bloom.From(revocationList.RevokedTokens.Bits, uint(*revocationList.RevokedTokens.K))
+	filter.MightContain([]byte(accessToken))
 
-	var revocationListCached *iamclientmodels.OauthapiRevocationList
-	if x, found := c.Get("default"); found {
-		revocationListCached = x.(*iamclientmodels.OauthapiRevocationList)
-
-		filter := bloom.From(revocationListCached.RevokedTokens.Bits, uint(*revocationListCached.RevokedTokens.K))
-		filter.MightContain([]byte(accessToken))
-
-		// revoked user
-		for _, revokedUser := range revocationListCached.RevokedUsers {
-			revokedUsers[*revokedUser.ID] = time.Time(revokedUser.RevokedAt)
-			c.Set(*revokedUser.ID, revokedUsers, cache.DefaultExpiration)
-		}
+	// revoked user
+	for _, revokedUser := range revocationList.RevokedUsers {
+		revokedUsers[*revokedUser.ID] = time.Time(revokedUser.RevokedAt)
 	}
 
 	return nil
-}
-
-// GenerateUUID generates uuid without hyphens
-func GenerateUUID() string {
-	id, _ := uuid.NewRandom()
-
-	return strings.ReplaceAll(id.String(), "-", "")
 }

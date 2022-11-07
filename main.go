@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -14,7 +13,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -22,9 +23,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/examples/data"
-	"google.golang.org/grpc/metadata"
 
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 	"plugin-arch-grpc-server-go/pkg/server"
@@ -79,31 +77,24 @@ func main() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 
-	cert, err := tls.LoadX509KeyPair(data.Path("x509/server_cert.pem"), data.Path("x509/server_key.pem"))
-	if err != nil {
-		log.Fatalf("failed to load key pair: %s", err)
-	}
-
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			otelgrpc.UnaryServerInterceptor(),
-			ensureValidToken,
+			server.EnsureValidToken,
 		),
 		grpc.ChainStreamInterceptor(
 			otelgrpc.StreamServerInterceptor(),
 		),
-		grpc.Creds(credentials.NewServerTLSFromCert(&cert)),
 	}
 
 	s := grpc.NewServer(opts...)
-
-	reflection.Register(s) // self documentation for the server
 
 	matchMaker := server.New()
 
 	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
 		MatchMaker: matchMaker,
 	})
+	reflection.Register(s) // self documentation for the server
 	logrus.Printf("gRPC server listening at %v", lis.Addr())
 
 	if err = s.Serve(lis); err != nil {
@@ -134,18 +125,4 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 	)
 
 	return tp, nil
-}
-
-func ensureValidToken(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("error missing metadata")
-	}
-	// The keys within metadata.MD are normalized to lowercase.
-	// See: https://godoc.org/google.golang.org/grpc/metadata#New
-	if !server.ValidateAuth(md["authorization"]) {
-		return nil, fmt.Errorf("error invalid token")
-	}
-	// Continue execution of handler after ensuring a valid token.
-	return handler(ctx, req)
 }
