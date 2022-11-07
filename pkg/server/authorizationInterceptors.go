@@ -21,6 +21,7 @@ import (
 	"github.com/AccelByte/bloom"
 	"github.com/AccelByte/go-jose/jwt"
 	"github.com/google/uuid"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -137,21 +138,17 @@ func TokenValidator(accessToken string) bool {
 
 	permissionResources := make(map[string]string, 0)
 	permissionResources["{namespace}"] = jwtClaims.Namespace
-
 	for placeholder, value := range permissionResources {
 		requiredPermission.Resource = strings.Replace(requiredPermission.Resource, placeholder, value, 1)
 	}
 
 	for _, grantedPermission := range jwtClaims.Permissions {
 		grantedAction := grantedPermission.Action
-		if resourceAllowed(grantedPermission.Resource, requiredPermission.Resource) &&
+		if !resourceAllowed(grantedPermission.Resource, requiredPermission.Resource) &&
 			actionAllowed(grantedAction, requiredPermission.Action) {
-			return true
+			return false
 		}
 	}
-
-	logrus.Info("ValidatePermission: permission allowed to access resource")
-
 	logrus.Info("JWT validated.")
 
 	return true
@@ -220,14 +217,22 @@ func fetchJWKS() error {
 		return nil
 	}
 
-	for _, key := range getJWKSV3.Keys {
-		publicKey, errGenerate := generatePublicKey(key)
-		if errGenerate != nil {
-			logrus.Error(errGenerate)
+	// stored as a cache
+	c := cache.New(5*time.Minute, 10*time.Minute)
+	c.Set("default", getJWKSV3, cache.DefaultExpiration)
 
-			return errGenerate
+	var getJWKSV3Cached *iamclientmodels.OauthcommonJWKSet
+	if x, found := c.Get("default"); found {
+		getJWKSV3Cached = x.(*iamclientmodels.OauthcommonJWKSet)
+		for _, key := range getJWKSV3Cached.Keys {
+			publicKey, errGenerate := generatePublicKey(key)
+			if errGenerate != nil {
+				logrus.Error(errGenerate)
+
+				return errGenerate
+			}
+			keys[key.Kid] = publicKey
 		}
-		keys[key.Kid] = publicKey
 	}
 
 	return nil
@@ -292,13 +297,22 @@ func getRevocationList(accessToken string) error {
 		return err
 	}
 
-	// revoked token
-	filter := bloom.From(revocationList.RevokedTokens.Bits, uint(*revocationList.RevokedTokens.K))
-	filter.MightContain([]byte(accessToken))
+	// saved it in a cache
+	c := cache.New(5*time.Minute, 10*time.Minute)
+	c.Set("default", revocationList, cache.DefaultExpiration)
 
-	// revoked user
-	for _, revokedUser := range revocationList.RevokedUsers {
-		revokedUsers[*revokedUser.ID] = time.Time(revokedUser.RevokedAt)
+	var revocationListCached *iamclientmodels.OauthapiRevocationList
+	if x, found := c.Get("default"); found {
+		revocationListCached = x.(*iamclientmodels.OauthapiRevocationList)
+
+		filter := bloom.From(revocationListCached.RevokedTokens.Bits, uint(*revocationListCached.RevokedTokens.K))
+		filter.MightContain([]byte(accessToken))
+
+		// revoked user
+		for _, revokedUser := range revocationListCached.RevokedUsers {
+			revokedUsers[*revokedUser.ID] = time.Time(revokedUser.RevokedAt)
+			c.Set(*revokedUser.ID, revokedUsers, cache.DefaultExpiration)
+		}
 	}
 
 	return nil
