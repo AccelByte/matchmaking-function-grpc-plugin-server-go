@@ -10,8 +10,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "6565:6565"
-      - "8080:8080"
+      - "5500:5500"
     environment:
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://otel-collector:9411/api/v2/spans # Zipkin
       - AB_CLIENT_ID=${AB_CLIENT_ID}
