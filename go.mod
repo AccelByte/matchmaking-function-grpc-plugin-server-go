@@ -8,6 +8,8 @@ require (
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.36.1
@@ -16,11 +18,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.11.1
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
-)
-
-require (
-	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pkg/errors v0.9.1
 )
 
 require (
@@ -49,7 +46,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/spaolacci/murmur3 v1.1.0 // indirect
+	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/willf/bitset v1.1.11 // indirect
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.4.0 // indirect
