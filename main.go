@@ -13,15 +13,16 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
@@ -37,29 +38,47 @@ const (
 	id          = 1
 )
 
-func tracerProvider() (*tracesdk.TracerProvider, error) {
-	// Create the Jaeger exporter
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
+func initProvider() (*sdktrace.TracerProvider, error) {
+	// Create the Tempo exporter
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ctx, cancel = context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, "tempo:4317", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
 	}
-	tp := tracesdk.NewTracerProvider(
-		// Always be sure to batch in production.
-		tracesdk.WithBatcher(exp),
-		// Record information about this application in a Resource.
-		tracesdk.WithResource(resource.NewWithAttributes(
+
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
+
+	// Register the trace exporter with a TracerProvider, using a batch
+	// span processor to aggregate spans before export.
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(service),
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		)),
+		sdktrace.WithSpanProcessor(bsp),
 	)
+	otel.SetTracerProvider(tracerProvider)
 
-	return tp, nil
+	// set global propagator to tracecontext (the default is no-op).
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	// Shutdown will flush any remaining spans and shut down the exporter.
+	return tracerProvider, nil
 }
 
 func main() {
-	tp, err := tracerProvider()
+	tp, err := initProvider()
 	if err != nil {
 		log.Fatal(err)
 	}
