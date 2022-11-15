@@ -81,8 +81,8 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: app-server
-                      port_value: 5500
+                      address: server-app
+                      port_value: 6565
     - name: otel-collector
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
