@@ -1,7 +1,16 @@
 receivers:
   zipkin:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'CustomMatchMakingFunctionGRPC-Go-metrics'
+          metrics_path: '/metrics'
+          scrape_interval: 60s
+          scrape_timeout: 10s
+          static_configs:
+            - targets: ['server-app:8080']
 
-exporters:  
+exporters:
   logging:
     loglevel: debug
   jaeger:
@@ -48,3 +57,7 @@ service:
       receivers: [zipkin]
       processors: [batch,tail_sampling]
       exporters: [logging,jaeger,otlp/tempo]
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [logging,prometheusremotewrite]

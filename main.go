@@ -10,13 +10,14 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -37,6 +38,8 @@ const (
 	environment = "production"
 	id          = 1
 )
+
+var port = flag.Int("port", 6565, "The grpc server port")
 
 func initProvider() (*sdktrace.TracerProvider, error) {
 	// Create the Tempo exporter
@@ -111,7 +114,6 @@ func main() {
 
 	flag.Parse()
 
-	port := flag.Int("port", 5500, "The server port")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
@@ -129,6 +131,12 @@ func main() {
 
 	s := grpc.NewServer(opts...)
 
+	// propagator for envoy
+	header := http.Header{}
+	propagator := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
+	ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
+
+	// cal the server grpc
 	matchMaker := server.New()
 
 	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
