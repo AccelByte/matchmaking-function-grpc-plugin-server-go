@@ -10,13 +10,15 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5500:5500"
+      - "6565:6565"
     environment:
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://otel-collector:9411/api/v2/spans # Zipkin
       - AB_CLIENT_ID=${AB_CLIENT_ID}
       - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
       - AB_BASE_URL=${AB_BASE_URL}
       - AB_NAMESPACE=${AB_NAMESPACE}
+      - GRPC_GO_LOG_VERBOSITY_LEVEL="99"
+      - GRPC_GO_LOG_SEVERITY_LEVEL=info
     networks:
       plugin-arch-server-go:
     logging:
