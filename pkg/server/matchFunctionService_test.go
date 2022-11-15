@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"testing"
 
-	tp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
+	tp "google.golang.org/protobuf/types/known/timestamppb"
 
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
