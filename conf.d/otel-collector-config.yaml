@@ -8,7 +8,7 @@ receivers:
           scrape_interval: 60s
           scrape_timeout: 10s
           static_configs:
-            - targets: ['server-app:8080']
+            - targets: ['app-server:8080']
 
 exporters:
   logging:
