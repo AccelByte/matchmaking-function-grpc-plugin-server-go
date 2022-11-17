@@ -1,8 +1,4 @@
 version: '3.5'
-networks:
-  plugin-arch-server-go:
-    name: plugin-arch-server-go
-    external: true
 
 services:
   app-server:
@@ -13,7 +9,7 @@ services:
       - "6565:6565"
       - "8080:8080"
     environment:
-      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://otel-collector:9411/api/v2/spans # Zipkin
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans # Zipkin
       - OTEL_SERVICE_NAME=CustomMatchMakingFunctionGoServerDocker
       - AB_CLIENT_ID=${AB_CLIENT_ID}
       - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
@@ -21,12 +17,10 @@ services:
       - AB_NAMESPACE=${AB_NAMESPACE}
 #      - GRPC_GO_LOG_VERBOSITY_LEVEL="99" # enable to debug grpc
 #      - GRPC_GO_LOG_SEVERITY_LEVEL=info # enable to debug grpc
-    networks:
-      plugin-arch-server-go:
     logging:
       driver: loki
       options:
-        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-url: http://host.docker.internal:3100/loki/api/v1/push
         mode: non-blocking
         max-buffer-size: 4m
         loki-retries: "3"
