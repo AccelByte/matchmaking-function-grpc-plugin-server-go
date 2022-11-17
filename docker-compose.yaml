@@ -1,7 +1,7 @@
 version: '3.5'
 
 services:
-  app-server:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
