@@ -1,38 +1,74 @@
-# AccelByte Plugin Architecture Demo using Go [Server Part]
+# plugin-arch-grpc-server-go
+
+> :warning: **If you are new to AccelByte Cloud Service Customization gRPC Plugin Architecture**: Start reading from `OVERVIEW.md` in `plugin-arch-grpc-dependencies` repository to get the full context.
+
+Justice service customization using gRPC plugin architecture - Server (Go).
+
+## Prerequisites
+
+1. Windows 10 WSL2 or Linux Ubuntu 20.04 with the following tools installed.
+
+    a. bash
+
+    b. docker
+
+    c. docker-compose
+
+    d. docker loki driver
+        
+        docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+
+    e. make
+
+    f. go 1.18
+
+2. AccelByte Cloud demo environment.
+
+    a. Base URL: https://demo.accelbyte.io.
+
+    b. [Create a Game Namespace](https://docs.accelbyte.io/esg/uam/namespaces.html#tutorials) if you don't have one yet. Keep the `Namespace ID`.
+
+    c. [Create an OAuth Client](https://docs.accelbyte.io/guides/access/iam-client.html) with confidential client type and give it `read` permission to resource `NAMESPACE:{namespace}:MMV2GRPCSERVICE`. Keep the `Client ID` and `Client Secret`.
 
 ## Setup
-This demo requires Go 1.18 to be installed.
 
-1. For complete server components to work, you need `docker` and `docker-compose` to be installed.
-2. Install docker logging driver for loki with this command:
-    ```bash
-    $ docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-    ```
-3. You can verify whether loki driver has been installed using:
-    ```bash
-    $ docker plugin ls
-    ```
-4. Go 1.18 is required to build and run outside of docker environment.
+Create a docker compose `.env` file based on `.env.template` file and fill in the required environment variables in `.env` file.
 
-## Usage
+```
+AB_BASE_URL=https://demo.accelbyte.io      # Base URL
+AB_SECURITY_CLIENT_ID=xxxxxxxxxx           # Client ID
+AB_SECURITY_CLIENT_SECRET=xxxxxxxxxx       # Client Secret
+AB_NAMESPACE=xxxxxxxxxx                    # Namespace ID
+```
 
-1. Make an env file in the root directory `plugin-arch-grpc-server-go/.env` with value
-    ```bash
-    AB_USERNAME=user@mail.com
-    AB_PASSWORD=pass123
-    AB_NAMESPACE=test
-    AB_CLIENT_ID=clientId123
-    AB_CLIENT_SECRET=clientSecret123
-    AB_BASE_URL=https://demo.accelbyte.io
-    ```
-3. Run dependencies first.
-    ```bash
-    $ docker-compose -f docker-compose-dependencies.yaml up
-    ```
-4. Then run app. Use `--build` if the app image need to be rebuild. For example when there are changes in configuration.
-    ```bash
-    $ docker-compose -f docker-compose-app.yml up --build
-    or
-    $ docker-compose -f docker-compose-app.yml up
-    ```
-5. Use Postman or any other Grpc client, and point it to `localhost:10000` (default). Grpc service discovery is already enabled and if client supported it, then it can be use to simplify the testing.
+> :exclamation: **For the server and client**: Use the same Base URL, Client ID, Client Secret, and Namespace ID.
+
+## Building
+
+Build the project and create a docker image for the current platform in one go.
+
+```
+make build image
+```
+
+For more details about the command, see [Makefile](Makefile).
+
+## Running
+
+Use the following command to run the project.
+
+```
+docker-compose up
+```
+
+## Advanced
+
+### Building Multi-Arch Docker Image
+
+Build the project and create a multi-arch docker image in one go.
+
+```
+make build imagex
+```
+
+For more details about the command, see [Makefile](Makefile).
