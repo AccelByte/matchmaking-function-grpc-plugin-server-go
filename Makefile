@@ -5,6 +5,7 @@
 SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.18
+IMAGE_NAME := plugin-arch-grpc-server-go-app
 
 proto:
 	rm -rfv pkg/pb/*
@@ -26,6 +27,15 @@ lint: proto
 build: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
 		sh -c "go build"
+
+image:
+	docker build -t ${IMAGE_NAME} .
+
+imagex:
+	trap "docker buildx rm ${IMAGE_NAME}-builder" EXIT \
+			&& docker buildx create --name ${IMAGE_NAME}-builder --use \
+			&& docker buildx build -t ${IMAGE_NAME} --platform linux/arm64/v8,linux/amd64 . \
+			&& docker buildx build -t ${IMAGE_NAME} --load .
 
 test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \

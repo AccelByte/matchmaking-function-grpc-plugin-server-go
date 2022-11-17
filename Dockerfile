@@ -2,7 +2,7 @@
 # This is licensed software from AccelByte Inc, for limitations
 # and restrictions contact your company contract manager.
 
-FROM golang:1.18-alpine
+FROM golang:1.18
 
 # Set destination for COPY
 WORKDIR /app
