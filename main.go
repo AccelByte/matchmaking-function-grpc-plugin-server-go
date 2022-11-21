@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -35,7 +35,6 @@ import (
 	"plugin-arch-grpc-server-go/pkg/server"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -55,20 +54,26 @@ var (
 )
 
 func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.TracerProvider, error) {
-	// Create the Tempo exporter
-	conn, err := grpc.DialContext(ctx, "tempo:4317", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	// Create Zipkin Exporter and install it as a global tracer.
+	//
+	// For demoing purposes, always sample. In a production application, you should
+	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
+	// ratio.
+	exporter, err := zipkin.New(os.Getenv("OTEL_EXPORTER_ZIPKIN_ENDPOINT"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
+		logrus.Fatalf("failed to call zipkin exporter. %s", err.Error())
 	}
 
-	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
-	}
+	res = resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(os.Getenv("OTEL_SERVICE_NAME")),
+		attribute.String("environment", environment),
+		attribute.Int64("ID", id),
+	)
 
 	// Register the trace exporter with a TracerProvider, using a batch
 	// span processor to aggregate spans before export.
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
@@ -199,9 +204,6 @@ func main() {
 
 	// Cleanly shutdown and flush telemetry when the application exits.
 	defer func(ctx context.Context) {
-		// Do not make the application hang when it is shutdown.
-		ctx, cancel = context.WithTimeout(ctx, time.Second*5)
-		defer cancel()
 		if err := tp.Shutdown(ctx); err != nil {
 			logrus.Fatal(err)
 		}
