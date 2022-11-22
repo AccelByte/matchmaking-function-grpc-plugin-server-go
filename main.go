@@ -15,10 +15,10 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/reflection"
 
@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/zipkin"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -83,42 +82,8 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 	// set global propagator to tracecontext (the default is no-op).
 	//otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	// metrics
-	enableMetrics(ctx, grpcServer)
-
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tracerProvider, nil
-}
-
-func enableMetrics(ctx context.Context, grpcServer *grpc.Server) {
-	// The exporter embeds a default OpenTelemetry Reader and
-	// implements prometheus.Collector, allowing it to be used as
-	// both a Reader and Collector.
-	rdr := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(rdr))
-	meter := provider.Meter("plugin-arch-grpc-server-instrumentation")
-
-	// Start the prometheus HTTP server and pass the exporter Collector to it
-	go serveMetrics(grpcServer)
-
-	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.SyncFloat64().Histogram("histogram")
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	startTime := time.Now()
-	histogram.Record(ctx, float64(time.Since(startTime).Milliseconds()))
-
-	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
-	<-ctx.Done()
-}
-
-func serveMetrics(grpcServer *grpc.Server) {
-	// Create some standard server metrics.
-	grpcMetrics := grpcPrometheus.NewServerMetrics()
-
-	// Initialize all metrics.
-	grpcMetrics.InitializeMetrics(grpcServer)
 }
 
 func main() {
@@ -126,24 +91,27 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	}()
-
-	logrus.Printf("prometheus metrics served at :8080/metrics")
-
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			otelgrpc.UnaryServerInterceptor(),
+			grpcPrometheus.UnaryServerInterceptor,
 			server.EnsureValidToken,
 		),
 		grpc.ChainStreamInterceptor(
 			otelgrpc.StreamServerInterceptor(),
+			grpcPrometheus.StreamServerInterceptor,
 		),
 	}
 
 	s := grpc.NewServer(opts...)
+
+	// prometheus metrics
+	grpcPrometheus.Register(s)
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
+	logrus.Printf("prometheus metrics served at :8080/metrics")
 
 	logrus.Infof("listening to grpc port.")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -205,4 +173,12 @@ func main() {
 	span.End()
 
 	flag.Parse()
+
+	// Create some standard server metrics.
+	grpcMetrics := grpcPrometheus.NewServerMetrics()
+
+	// Initialize all metrics.
+	grpcMetrics.InitializeMetrics(s)
+	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
+	<-ctx.Done()
 }
