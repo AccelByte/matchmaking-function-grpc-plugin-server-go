@@ -8,19 +8,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"google.golang.org/grpc/reflection"
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
@@ -115,32 +116,24 @@ func enableMetrics(ctx context.Context, grpcServer *grpc.Server) {
 }
 
 func serveMetrics(grpcServer *grpc.Server) {
-	// Create a HTTP server for prometheus.
-	reg := prometheus.NewRegistry()
-	httpServer := &http.Server{Handler: promhttp.HandlerFor(reg, promhttp.HandlerOpts{}), Addr: "0.0.0.0:8080"}
-	logrus.Printf("serving metrics at localhost:8080/metrics")
-
 	// Create some standard server metrics.
 	grpcMetrics := grpcPrometheus.NewServerMetrics()
 
 	// Initialize all metrics.
 	grpcMetrics.InitializeMetrics(grpcServer)
-
-	// Start your http server for prometheus.
-	logrus.Printf("listen and serve for prometheus")
-	go func() {
-		if err := httpServer.ListenAndServe(); err != nil {
-			logrus.Fatalf("Unable to start a http server. %s", err.Error())
-		}
-	}()
-
-	logrus.Printf("listen and served")
 }
 
 func main() {
 	logrus.Infof("starting app server.")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
+
+	logrus.Printf("prometheus metrics served at :8080/metrics")
 
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
