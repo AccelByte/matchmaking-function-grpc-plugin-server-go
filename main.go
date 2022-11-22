@@ -74,11 +74,10 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 
 	// Register the trace exporter with a TracerProvider, using a batch
 	// span processor to aggregate spans before export.
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithBatcher(exporter, sdktrace.WithBatchTimeout(time.Second*1)),
 	)
 	otel.SetTracerProvider(tracerProvider)
 
