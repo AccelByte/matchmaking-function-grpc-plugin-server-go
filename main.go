@@ -165,7 +165,7 @@ func main() {
 
 	tr := tp.Tracer("server-component-main")
 
-	_, span := tr.Start(ctx, "main")
+	_, span := tr.Start(ctx, "StartSpan")
 	span.End()
 
 	flag.Parse()
