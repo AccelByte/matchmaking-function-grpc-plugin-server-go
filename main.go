@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel/propagation"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -23,7 +25,6 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/zipkin"
@@ -77,10 +78,6 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 		sdktrace.WithResource(res),
 		sdktrace.WithBatcher(exporter, sdktrace.WithBatchTimeout(time.Second*1)),
 	)
-	otel.SetTracerProvider(tracerProvider)
-
-	// set global propagator to tracecontext (the default is no-op).
-	//otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tracerProvider, nil
@@ -121,10 +118,6 @@ func main() {
 		return
 	}
 
-	p := b3.New()
-	// Register the B3 propagator globally.
-	otel.SetTextMapPropagator(p)
-
 	// cal the server grpc
 	matchMaker := server.New()
 
@@ -155,10 +148,13 @@ func main() {
 	// Register our TracerProvider as the global so any imported
 	// instrumentation in the future will default to using it.
 	otel.SetTracerProvider(tp)
-	// otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-	// 	propagation.TraceContext{},
-	// 	propagation.Baggage{},
-	// ))
+	// Register the B3 propagator globally.
+	p := b3.New()
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		p,
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	// Cleanly shutdown and flush telemetry when the application exits.
 	defer func(ctx context.Context) {
