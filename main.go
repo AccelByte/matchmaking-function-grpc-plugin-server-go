@@ -15,10 +15,11 @@ import (
 	"os/signal"
 	"time"
 
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
@@ -162,11 +163,6 @@ func main() {
 			logrus.Fatal(err)
 		}
 	}(ctx)
-
-	tr := tp.Tracer("server-component-main")
-
-	_, span := tr.Start(ctx, "StartSpan")
-	span.End()
 
 	flag.Parse()
 
