@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 )
 
@@ -66,9 +65,7 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 		for result := range resultChan {
 			logrus.Info("creating a match")
 			match := &matchfunctiongrpc.Match{
-				Tickets:           result.Tickets,
-				RegionPreferences: nil,
-				MatchAttributes:   nil,
+				Tickets: result.Tickets,
 			}
 			resp := matchfunctiongrpc.MatchResponse{Match: match}
 			if sErr := server.Send(&resp); err != nil {

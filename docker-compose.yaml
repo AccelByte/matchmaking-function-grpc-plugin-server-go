@@ -17,7 +17,8 @@ services:
       - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
       - AB_BASE_URL=${AB_BASE_URL}
       - AB_NAMESPACE=${AB_NAMESPACE}
-#      - GRPC_GO_LOG_VERBOSITY_LEVEL="99" # enable to debug grpc
+#      - GODEBUG=http2debug=2
+#      - GRPC_GO_LOG_VERBOSITY_LEVEL=99 # enable to debug grpc
 #      - GRPC_GO_LOG_SEVERITY_LEVEL=info # enable to debug grpc
     logging:
       driver: loki

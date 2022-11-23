@@ -5,6 +5,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -54,6 +55,10 @@ func (b MatchMaker) RulesFromJSON(jsonRules string) (interface{}, error) {
 
 // MakeMatches iterates over all the crew tickets and matches them based on the min/max of the game rules
 func (b MatchMaker) MakeMatches(matchRules interface{}) <-chan Match {
+	logrus.Info("makeMatches by matchMaker.")
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	results := make(chan Match)
 	ruleSet, ok := matchRules.(GameRules)
 	if !ok {
