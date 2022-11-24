@@ -9,20 +9,22 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
-
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -102,6 +104,34 @@ func main() {
 	}
 
 	s := grpc.NewServer(opts...)
+
+	// prometheus
+	requestDurations := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "http_request_duration_seconds",
+		Help:    "A histogram of the HTTP request durations in seconds.",
+		Buckets: prometheus.ExponentialBucketsRange(1, 100, 10),
+	})
+
+	// Create non-global registry.
+	registry := prometheus.NewRegistry()
+
+	// Add go runtime metrics and process collectors.
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		requestDurations,
+	)
+
+	go func() {
+		for {
+			// Record fictional latency.
+			now := time.Now()
+			requestDurations.(prometheus.ExemplarObserver).ObserveWithExemplar(
+				time.Since(now).Seconds(), prometheus.Labels{"id": fmt.Sprint(rand.Intn(100000))},
+			)
+			time.Sleep(600 * time.Millisecond)
+		}
+	}()
 
 	// prometheus metrics
 	grpcPrometheus.Register(s)
