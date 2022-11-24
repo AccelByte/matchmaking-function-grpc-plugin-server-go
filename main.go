@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -105,13 +104,6 @@ func main() {
 
 	s := grpc.NewServer(opts...)
 
-	// prometheus
-	requestDurations := prometheus.NewHistogram(prometheus.HistogramOpts{
-		Name:    "http_request_duration_seconds",
-		Help:    "A histogram of the HTTP request durations in seconds.",
-		Buckets: prometheus.ExponentialBucketsRange(1, 100, 10),
-	})
-
 	// Create non-global registry.
 	registry := prometheus.NewRegistry()
 
@@ -119,24 +111,17 @@ func main() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		requestDurations,
 	)
-
-	go func() {
-		for {
-			// Record fictional latency.
-			now := time.Now()
-			requestDurations.(prometheus.ExemplarObserver).ObserveWithExemplar(
-				time.Since(now).Seconds(), prometheus.Labels{"id": fmt.Sprint(rand.Intn(100000))},
-			)
-			time.Sleep(600 * time.Millisecond)
-		}
-	}()
 
 	// prometheus metrics
 	grpcPrometheus.Register(s)
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
+		http.Handle("/metrics", server.NewMetrics(
+			registry, nil).
+			WrapHandler("/metrics", promhttp.HandlerFor(
+				registry,
+				promhttp.HandlerOpts{}),
+			))
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	logrus.Printf("prometheus metrics served at :8080/metrics")
