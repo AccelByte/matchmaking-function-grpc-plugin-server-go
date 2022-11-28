@@ -15,14 +15,15 @@ import (
 	"os/signal"
 	"time"
 
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
-
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
+	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -103,10 +104,24 @@ func main() {
 
 	s := grpc.NewServer(opts...)
 
+	// Create non-global registry.
+	registry := prometheus.NewRegistry()
+
+	// Add go runtime metrics and process collectors.
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+
 	// prometheus metrics
 	grpcPrometheus.Register(s)
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
+		http.Handle("/metrics", server.NewMetrics(
+			registry, nil).
+			WrapHandler("/metrics", promhttp.HandlerFor(
+				registry,
+				promhttp.HandlerOpts{}),
+			))
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	logrus.Printf("prometheus metrics served at :8080/metrics")
