@@ -29,13 +29,14 @@ build: proto
 		sh -c "go build"
 
 image:
-	docker build -t ${IMAGE_NAME} .
+	docker buildx build -t ${IMAGE_NAME} --load .
 
 imagex:
-	trap "docker buildx rm ${IMAGE_NAME}-builder" EXIT \
-			&& docker buildx create --name ${IMAGE_NAME}-builder --use \
-			&& docker buildx build -t ${IMAGE_NAME} --platform linux/arm64/v8,linux/amd64 . \
-			&& docker buildx build -t ${IMAGE_NAME} --load .
+	docker buildx inspect ${IMAGE_NAME}-builder \
+			|| docker buildx create --name ${IMAGE_NAME}-builder --use 
+	docker buildx build -t ${IMAGE_NAME} --platform linux/arm64/v8,linux/amd64 .
+	docker buildx build -t ${IMAGE_NAME} --load .
+	#docker buildx rm ${IMAGE_NAME}-builder
 
 test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
