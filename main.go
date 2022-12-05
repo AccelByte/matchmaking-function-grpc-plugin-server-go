@@ -11,8 +11,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -87,6 +89,13 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 }
 
 func main() {
+	go func() {
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(10)
+		_ = http.ListenAndServe(":6060", nil)
+	}()
+	logrus.Printf("pprof served at :6060")
+
 	logrus.Infof("starting app server.")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
