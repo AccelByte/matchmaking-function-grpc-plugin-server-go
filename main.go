@@ -125,8 +125,12 @@ func main() {
 	// Create non-global registry.
 	registry := prometheus.NewRegistry()
 
+	// Create some standard server metrics.
+	grpcMetrics := grpcPrometheus.NewServerMetrics()
+
 	// Add go runtime metrics and process collectors.
 	registry.MustRegister(
+		grpcMetrics,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -198,9 +202,6 @@ func main() {
 	}(ctx)
 
 	flag.Parse()
-
-	// Create some standard server metrics.
-	grpcMetrics := grpcPrometheus.NewServerMetrics()
 
 	// Initialize all metrics.
 	grpcMetrics.InitializeMetrics(s)
