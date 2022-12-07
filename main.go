@@ -11,14 +11,17 @@ import (
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
+	"google.golang.org/grpc/keepalive"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -86,10 +89,24 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 }
 
 func main() {
+	go func() {
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(10)
+		_ = http.ListenAndServe(":6060", nil)
+	}()
+	logrus.Printf("pprof served at :6060")
+
 	logrus.Infof("starting app server.")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	serverParams := keepalive.ServerParameters{
+		Time:                  10 * time.Second,
+		Timeout:               10 * time.Second,
+		MaxConnectionAge:      10 * time.Second,
+		MaxConnectionIdle:     10 * time.Second,
+		MaxConnectionAgeGrace: 10 * time.Second,
+	}
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			otelgrpc.UnaryServerInterceptor(),
@@ -100,6 +117,7 @@ func main() {
 			otelgrpc.StreamServerInterceptor(),
 			grpcPrometheus.StreamServerInterceptor,
 		),
+		grpc.KeepaliveParams(serverParams),
 	}
 
 	s := grpc.NewServer(opts...)
@@ -107,8 +125,12 @@ func main() {
 	// Create non-global registry.
 	registry := prometheus.NewRegistry()
 
+	// Create some standard server metrics.
+	grpcMetrics := grpcPrometheus.NewServerMetrics()
+
 	// Add go runtime metrics and process collectors.
 	registry.MustRegister(
+		grpcMetrics,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -180,9 +202,6 @@ func main() {
 	}(ctx)
 
 	flag.Parse()
-
-	// Create some standard server metrics.
-	grpcMetrics := grpcPrometheus.NewServerMetrics()
 
 	// Initialize all metrics.
 	grpcMetrics.InitializeMetrics(s)
