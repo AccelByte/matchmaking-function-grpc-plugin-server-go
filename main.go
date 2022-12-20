@@ -21,7 +21,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
-	"google.golang.org/grpc/keepalive"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -100,13 +99,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serverParams := keepalive.ServerParameters{
-		Time:                  10 * time.Second,
-		Timeout:               10 * time.Second,
-		MaxConnectionAge:      10 * time.Second,
-		MaxConnectionIdle:     10 * time.Second,
-		MaxConnectionAgeGrace: 10 * time.Second,
-	}
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			otelgrpc.UnaryServerInterceptor(),
@@ -117,7 +109,6 @@ func main() {
 			otelgrpc.StreamServerInterceptor(),
 			grpcPrometheus.StreamServerInterceptor,
 		),
-		grpc.KeepaliveParams(serverParams),
 	}
 
 	s := grpc.NewServer(opts...)

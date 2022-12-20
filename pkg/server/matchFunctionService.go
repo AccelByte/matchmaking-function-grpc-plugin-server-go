@@ -37,6 +37,7 @@ func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunc
 
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
 	ctx := server.Context()
+	defer ctx.Done()
 
 	// set default gameRules value
 	m.shipCountMax = 2
