@@ -5,13 +5,6 @@
 package server
 
 type GameRules struct {
-	ShipCountMin float64
-	ShipCountMax float64
-}
-
-type RuleObject interface {
-	GetShipCountMax() (shipCountMix int)
-	GetShipCountMin() (shipCountMin int)
-	SetShipCountMax(shipCountMax int)
-	SetShipCountMin(shipCountMin int)
+	ShipCountMin int `json:"shipCountMin"`
+	ShipCountMax int `json:"shipCountMax"`
 }

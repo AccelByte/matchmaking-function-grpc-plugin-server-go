@@ -6,78 +6,88 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"sync"
+	"encoding/json"
+	"errors"
 
 	"github.com/sirupsen/logrus"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 )
 
+// MatchFunctionServer is for the handler (upper level of match logic)
 type MatchFunctionServer struct {
 	matchfunctiongrpc.UnimplementedMatchFunctionServer
-	MatchMaker MatchLogic
+
+	shipCountMin     int
+	shipCountMax     int
+	unmatchedTickets []*matchfunctiongrpc.Ticket
 }
 
 func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfunctiongrpc.GetStatCodesRequest) (*matchfunctiongrpc.StatCodesResponse, error) {
 	codes := []string{"2", "2"}
 	logrus.Infof("stat codes: %s", codes)
-
 	return &matchfunctiongrpc.StatCodesResponse{Codes: codes}, nil
 }
 
 func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
-
 	return &matchfunctiongrpc.ValidateTicketResponse{Valid: true}, nil
 }
 
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
-	logrus.Info("make matches")
 	in, err := server.Recv()
 	if err != nil {
-		logrus.Errorf("error during stream Recv: %s", err)
-
+		logrus.Errorf("error receiving from stream: %v", err)
 		return err
 	}
 
-	mrpT, ok := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters)
-	if !ok {
-		logrus.Error("not a MakeMatchesRequest_Parameters type")
+	if inParameters, isParameters := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters); isParameters {
+		ruleObject := &GameRules{}
 
-		return fmt.Errorf("expected parameters in the first message were not met")
-	}
+		rulesJson := inParameters.Parameters.Rules.Json
+		err = json.Unmarshal([]byte(rulesJson), ruleObject)
 
-	rules, err := m.MatchMaker.RulesFromJSON(mrpT.Parameters.Rules.Json)
-	if err != nil {
-		logrus.Errorf("could not get rules from json: %s", err)
-
-		return err
-	}
-	logrus.Infof("rules: %s", rules)
-
-	resultChan := m.MatchMaker.MakeMatches(rules)
-
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for result := range resultChan {
-			logrus.Info("creating a match")
-			match := &matchfunctiongrpc.Match{
-				Tickets: result.Tickets,
-			}
-			resp := matchfunctiongrpc.MatchResponse{Match: match}
-			if sErr := server.Send(&resp); err != nil {
-				logrus.Errorf("error on server send: %s", sErr)
-
-				return
-			}
+		newShipCountMin := ruleObject.ShipCountMin
+		newShipCountMax := ruleObject.ShipCountMax
+		if newShipCountMin != 0 &&
+			newShipCountMax != 0 &&
+			newShipCountMin <= newShipCountMax {
+			m.shipCountMin = newShipCountMin
+			m.shipCountMax = newShipCountMax
 		}
-	}()
-	wg.Wait()
+		logrus.Infof("updated shipCountMin: %d shipCountMax: %d", m.shipCountMin, m.shipCountMax)
+	} else if inTicket, isTicket := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket); isTicket {
+		m.unmatchedTickets = append(m.unmatchedTickets, inTicket.Ticket)
+		if len(m.unmatchedTickets) == m.shipCountMax {
+			userIds := make([]string, 0)
+			for _, unmatchedTicket := range m.unmatchedTickets {
+				for _, player := range unmatchedTicket.Players {
+					userIds = append(userIds, player.PlayerId)
+				}
+			}
 
-	logrus.Info("make match")
+			matchResponse := &matchfunctiongrpc.MatchResponse{
+				Match: &matchfunctiongrpc.Match{
+					Teams: []*matchfunctiongrpc.Match_Team{
+						{
+							UserIds: userIds,
+						},
+					},
+					RegionPreferences: []string{"any"},
+				},
+			}
+
+			err = server.Send(matchResponse)
+			if err != nil {
+				logrus.Errorf("error sending to stream: %v", err)
+				return err
+			}
+
+			m.unmatchedTickets = make([]*matchfunctiongrpc.Ticket, 0)
+		}
+		logrus.Infof("unmatched ticket size: %d", len(m.unmatchedTickets))
+	} else {
+		return errors.New("invalid input")
+	}
 
 	return nil
 }
