@@ -2,108 +2,206 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
-package server
+package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"runtime"
+	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/propagation"
+	"google.golang.org/grpc/keepalive"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
-	server2 "plugin-arch-grpc-server-go/pkg/server"
+
+	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"google.golang.org/grpc/reflection"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+
+	"plugin-arch-grpc-server-go/pkg/server"
+
+	"google.golang.org/grpc"
 )
 
-// MatchFunctionServer is for the handler (upper level of match logic)
-type MatchFunctionServer struct {
-	matchfunctiongrpc.UnimplementedMatchFunctionServer
+const (
+	environment = "production"
+	id          = 1
+)
 
-	shipCountMin     int
-	shipCountMax     int
-	unmatchedTickets []*matchfunctiongrpc.Ticket
-}
+var (
+	service = os.Getenv("OTEL_SERVICE_NAME")
+	port    = flag.Int("port", 6565, "The grpc server port")
+	res     = resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(service),
+		attribute.String("environment", environment),
+		attribute.Int64("ID", id),
+	)
+)
 
-func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfunctiongrpc.GetStatCodesRequest) (*matchfunctiongrpc.StatCodesResponse, error) {
-	codes := []string{"2", "2"}
-	logrus.Infof("stat codes: %s", codes)
-	return &matchfunctiongrpc.StatCodesResponse{Codes: codes}, nil
-}
-
-func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
-	logrus.Info("validate ticket")
-	return &matchfunctiongrpc.ValidateTicketResponse{Valid: true}, nil
-}
-
-func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
-	ctx := server.Context()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		in, err := server.Recv()
-		if err == io.EOF {
-			logrus.Infof("exit")
-			return nil
-		} else if err != nil {
-			logrus.Errorf("error receiving from stream: %v", err)
-			return err
-		}
-
-		if inParameters, isParameters := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters); isParameters {
-			ruleObject := &server2.GameRules{}
-
-			rulesJson := inParameters.Parameters.Rules.Json
-			err = json.Unmarshal([]byte(rulesJson), ruleObject)
-
-			newShipCountMin := ruleObject.ShipCountMin
-			newShipCountMax := ruleObject.ShipCountMax
-			if newShipCountMin != 0 &&
-				newShipCountMax != 0 &&
-				newShipCountMin <= newShipCountMax {
-				m.shipCountMin = newShipCountMin
-				m.shipCountMax = newShipCountMax
-			}
-			logrus.Infof("updated shipCountMin: %d shipCountMax: %d", m.shipCountMin, m.shipCountMax)
-		} else if inTicket, isTicket := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket); isTicket {
-			m.unmatchedTickets = append(m.unmatchedTickets, inTicket.Ticket)
-			if len(m.unmatchedTickets) == m.shipCountMax {
-				userIds := make([]string, 0)
-				for _, unmatchedTicket := range m.unmatchedTickets {
-					for _, player := range unmatchedTicket.Players {
-						userIds = append(userIds, player.PlayerId)
-					}
-				}
-
-				matchResponse := &matchfunctiongrpc.MatchResponse{
-					Match: &matchfunctiongrpc.Match{
-						Teams: []*matchfunctiongrpc.Match_Team{
-							{
-								UserIds: userIds,
-							},
-						},
-						RegionPreferences: []string{"any"},
-					},
-				}
-
-				err = server.Send(matchResponse)
-				if err != nil {
-					logrus.Errorf("error sending to stream: %v", err)
-					return err
-				}
-
-				logrus.Infof("created a match for: %v", proto.MarshalTextString(matchResponse))
-				m.unmatchedTickets = make([]*matchfunctiongrpc.Ticket, 0)
-			}
-			logrus.Infof("unmatched ticket size: %d", len(m.unmatchedTickets))
-		} else {
-			return errors.New("invalid input")
-		}
-
+func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.TracerProvider, error) {
+	// Create Zipkin Exporter and install it as a global tracer.
+	//
+	// For demoing purposes, always sample. In a production application, you should
+	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
+	// ratio.
+	exporter, err := zipkin.New(os.Getenv("OTEL_EXPORTER_ZIPKIN_ENDPOINT"))
+	if err != nil {
+		logrus.Fatalf("failed to call zipkin exporter. %s", err.Error())
 	}
+
+	res = resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(os.Getenv("OTEL_SERVICE_NAME")),
+		attribute.String("environment", environment),
+		attribute.Int64("ID", id),
+	)
+
+	// Register the trace exporter with a TracerProvider, using a batch
+	// span processor to aggregate spans before export.
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+		sdktrace.WithBatcher(exporter, sdktrace.WithBatchTimeout(time.Second*1)),
+	)
+
+	// Shutdown will flush any remaining spans and shut down the exporter.
+	return tracerProvider, nil
+}
+
+func main() {
+	go func() {
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(10)
+		_ = http.ListenAndServe(":6060", nil)
+	}()
+	logrus.Printf("pprof served at :6060")
+
+	logrus.Infof("starting app server.")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverParams := keepalive.ServerParameters{
+		Time:                  10 * time.Second,
+		Timeout:               10 * time.Second,
+		MaxConnectionAge:      10 * time.Second,
+		MaxConnectionIdle:     10 * time.Second,
+		MaxConnectionAgeGrace: 10 * time.Second,
+	}
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			otelgrpc.UnaryServerInterceptor(),
+			grpcPrometheus.UnaryServerInterceptor,
+			server.EnsureValidToken,
+		),
+		grpc.ChainStreamInterceptor(
+			otelgrpc.StreamServerInterceptor(),
+			grpcPrometheus.StreamServerInterceptor,
+		),
+		grpc.KeepaliveParams(serverParams),
+	}
+
+	s := grpc.NewServer(opts...)
+
+	// Create non-global registry.
+	registry := prometheus.NewRegistry()
+
+	// Create some standard server metrics.
+	grpcMetrics := grpcPrometheus.NewServerMetrics()
+
+	// Add go runtime metrics and process collectors.
+	registry.MustRegister(
+		grpcMetrics,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+
+	// prometheus metrics
+	grpcPrometheus.Register(s)
+	go func() {
+		http.Handle("/metrics", server.NewMetrics(
+			registry, nil).
+			WrapHandler("/metrics", promhttp.HandlerFor(
+				registry,
+				promhttp.HandlerOpts{}),
+			))
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
+	logrus.Printf("prometheus metrics served at :8080/metrics")
+
+	logrus.Infof("listening to grpc port.")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	if err != nil {
+		logrus.Fatalf("failed to listen: %v", err)
+
+		return
+	}
+
+	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
+		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
+	})
+	logrus.Infof("adding the grpc reflection.")
+	reflection.Register(s) // self documentation for the server
+	logrus.Printf("gRPC server listening at %v", lis.Addr())
+
+	logrus.Infof("listening...")
+	go func() {
+		if err = s.Serve(lis); err != nil {
+			logrus.Fatalf("failed to serve: %v", err)
+
+			return
+		}
+	}()
+
+	logrus.Infof("starting init provider.")
+	tp, err := initProvider(ctx, s)
+	if err != nil {
+		logrus.Fatalf("failed to initializing the provider. %s", err.Error())
+
+		return
+	}
+
+	// Register our TracerProvider as the global so any imported
+	// instrumentation in the future will default to using it.
+	otel.SetTracerProvider(tp)
+	// Register the B3 propagator globally.
+	p := b3.New()
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		p,
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	// Cleanly shutdown and flush telemetry when the application exits.
+	defer func(ctx context.Context) {
+		if err := tp.Shutdown(ctx); err != nil {
+			logrus.Fatal(err)
+		}
+	}(ctx)
+
+	flag.Parse()
+
+	// Initialize all metrics.
+	grpcMetrics.InitializeMetrics(s)
+	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
+	<-ctx.Done()
 }
