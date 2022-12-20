@@ -8,7 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
 )
@@ -34,60 +36,73 @@ func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunc
 }
 
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
-	in, err := server.Recv()
-	if err != nil {
-		logrus.Errorf("error receiving from stream: %v", err)
-		return err
-	}
+	ctx := server.Context()
 
-	if inParameters, isParameters := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters); isParameters {
-		ruleObject := &GameRules{}
-
-		rulesJson := inParameters.Parameters.Rules.Json
-		err = json.Unmarshal([]byte(rulesJson), ruleObject)
-
-		newShipCountMin := ruleObject.ShipCountMin
-		newShipCountMax := ruleObject.ShipCountMax
-		if newShipCountMin != 0 &&
-			newShipCountMax != 0 &&
-			newShipCountMin <= newShipCountMax {
-			m.shipCountMin = newShipCountMin
-			m.shipCountMax = newShipCountMax
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
-		logrus.Infof("updated shipCountMin: %d shipCountMax: %d", m.shipCountMin, m.shipCountMax)
-	} else if inTicket, isTicket := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket); isTicket {
-		m.unmatchedTickets = append(m.unmatchedTickets, inTicket.Ticket)
-		if len(m.unmatchedTickets) == m.shipCountMax {
-			userIds := make([]string, 0)
-			for _, unmatchedTicket := range m.unmatchedTickets {
-				for _, player := range unmatchedTicket.Players {
-					userIds = append(userIds, player.PlayerId)
+
+		in, err := server.Recv()
+		if err == io.EOF {
+			logrus.Infof("exit")
+			return nil
+		} else if err != nil {
+			logrus.Errorf("error receiving from stream: %v", err)
+			return err
+		}
+
+		if inParameters, isParameters := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters); isParameters {
+			ruleObject := &GameRules{}
+
+			rulesJson := inParameters.Parameters.Rules.Json
+			err = json.Unmarshal([]byte(rulesJson), ruleObject)
+
+			newShipCountMin := ruleObject.ShipCountMin
+			newShipCountMax := ruleObject.ShipCountMax
+			if newShipCountMin != 0 &&
+				newShipCountMax != 0 &&
+				newShipCountMin <= newShipCountMax {
+				m.shipCountMin = newShipCountMin
+				m.shipCountMax = newShipCountMax
+			}
+			logrus.Infof("updated shipCountMin: %d shipCountMax: %d", m.shipCountMin, m.shipCountMax)
+		} else if inTicket, isTicket := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket); isTicket {
+			m.unmatchedTickets = append(m.unmatchedTickets, inTicket.Ticket)
+			if len(m.unmatchedTickets) == m.shipCountMax {
+				userIds := make([]string, 0)
+				for _, unmatchedTicket := range m.unmatchedTickets {
+					for _, player := range unmatchedTicket.Players {
+						userIds = append(userIds, player.PlayerId)
+					}
 				}
-			}
 
-			matchResponse := &matchfunctiongrpc.MatchResponse{
-				Match: &matchfunctiongrpc.Match{
-					Teams: []*matchfunctiongrpc.Match_Team{
-						{
-							UserIds: userIds,
+				matchResponse := &matchfunctiongrpc.MatchResponse{
+					Match: &matchfunctiongrpc.Match{
+						Teams: []*matchfunctiongrpc.Match_Team{
+							{
+								UserIds: userIds,
+							},
 						},
+						RegionPreferences: []string{"any"},
 					},
-					RegionPreferences: []string{"any"},
-				},
-			}
+				}
 
-			err = server.Send(matchResponse)
-			if err != nil {
-				logrus.Errorf("error sending to stream: %v", err)
-				return err
-			}
+				err = server.Send(matchResponse)
+				if err != nil {
+					logrus.Errorf("error sending to stream: %v", err)
+					return err
+				}
 
-			m.unmatchedTickets = make([]*matchfunctiongrpc.Ticket, 0)
+				logrus.Infof("created a match for: %v", proto.MarshalTextString(matchResponse))
+				m.unmatchedTickets = make([]*matchfunctiongrpc.Ticket, 0)
+			}
+			logrus.Infof("unmatched ticket size: %d", len(m.unmatchedTickets))
+		} else {
+			return errors.New("invalid input")
 		}
-		logrus.Infof("unmatched ticket size: %d", len(m.unmatchedTickets))
-	} else {
-		return errors.New("invalid input")
-	}
 
-	return nil
+	}
 }
