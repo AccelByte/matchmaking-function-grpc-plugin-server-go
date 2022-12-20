@@ -38,6 +38,10 @@ func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunc
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
 	ctx := server.Context()
 
+	// set default gameRules value
+	m.shipCountMax = 2
+	m.shipCountMin = 2
+
 	for {
 		select {
 		case <-ctx.Done():
