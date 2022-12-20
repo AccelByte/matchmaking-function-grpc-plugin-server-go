@@ -156,11 +156,8 @@ func main() {
 		return
 	}
 
-	// cal the server grpc
-	matchMaker := server.New()
-
 	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
-		MatchMaker: matchMaker,
+		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
 	})
 	logrus.Infof("adding the grpc reflection.")
 	reflection.Register(s) // self documentation for the server
