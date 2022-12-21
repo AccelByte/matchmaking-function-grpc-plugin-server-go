@@ -1,6 +1,6 @@
-# plugin-arch-grpc-server-go
+# matchmaking-function-grpc-plugin-server-go
 
-> :warning: **If you are new to AccelByte Cloud Service Customization gRPC Plugin Architecture**: Start reading from `OVERVIEW.md` in `plugin-arch-grpc-dependencies` repository to get the full context.
+> :warning: **If you are new to AccelByte Cloud Service Customization gRPC Plugin Architecture**: Start reading from `OVERVIEW.md` in `grpc-plugin-dependencies` repository to get the full context.
 
 Justice service customization using gRPC plugin architecture - Server (Go).
 
