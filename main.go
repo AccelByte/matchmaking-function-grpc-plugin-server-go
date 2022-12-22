@@ -21,7 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 
-	"plugin-arch-grpc-server-go/pkg/server"
+	"matchmaking-function-grpc-plugin-server-go/pkg/server"
 
 	"google.golang.org/grpc"
 )

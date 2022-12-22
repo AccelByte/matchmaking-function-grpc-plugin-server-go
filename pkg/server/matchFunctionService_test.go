@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	tp "google.golang.org/protobuf/types/known/timestamppb"
 
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	"google.golang.org/grpc"
 )

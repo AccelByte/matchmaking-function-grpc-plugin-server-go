@@ -58,4 +58,4 @@ Thumbs.db
 pkg/pb/
 
 # Go build output
-plugin-arch-grpc-server-go
+matchmaking-function-grpc-plugin-server-go

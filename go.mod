@@ -1,4 +1,4 @@
-module plugin-arch-grpc-server-go
+module matchmaking-function-grpc-plugin-server-go
 
 go 1.18
 
