@@ -12,7 +12,7 @@ Justice service customization using gRPC plugin architecture - Server (Go).
 
     b. docker
 
-    c. docker-compose
+    c. docker-compose v2
 
     d. docker loki driver
         
