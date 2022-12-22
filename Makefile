@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.18
-IMAGE_NAME := plugin-arch-grpc-server-go-app
+IMAGE_NAME := $(shell basename "$$(pwd)")-app
 
 proto:
 	rm -rfv pkg/pb/*
