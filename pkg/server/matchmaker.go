@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	"github.com/sirupsen/logrus"
 )

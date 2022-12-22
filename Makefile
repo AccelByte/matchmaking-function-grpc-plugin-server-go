@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.18
-IMAGE_NAME := plugin-arch-grpc-server-go-app
+IMAGE_NAME := $(shell basename "$$(pwd)")-app
 
 proto:
 	rm -rfv pkg/pb/*
@@ -40,6 +40,6 @@ imagex:
 
 test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go test plugin-arch-grpc-server-go/pkg/server"
+		sh -c "go test matchmaking-function-grpc-plugin-server-go/pkg/server"
 
 

@@ -15,16 +15,16 @@ COPY go.mod go.sum .
 RUN go mod download
 COPY . .
 COPY --from=proto /build/pkg/pb pkg/pb
-RUN env GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o plugin-arch-grpc-server-go_$TARGETOS-$TARGETARCH
+RUN env GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o matchmaking-function-grpc-plugin-server-go_$TARGETOS-$TARGETARCH
 
 
 FROM alpine:3.17.0
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
-COPY --from=builder /build/plugin-arch-grpc-server-go_$TARGETOS-$TARGETARCH plugin-arch-grpc-server-go
+COPY --from=builder /build/matchmaking-function-grpc-plugin-server-go_$TARGETOS-$TARGETARCH matchmaking-function-grpc-plugin-server-go
 # Plugin arch gRPC server port
 EXPOSE 6565
 # Prometheus /metrics web server port
 EXPOSE 8080
-CMD [ "/app/plugin-arch-grpc-server-go" ]
+CMD [ "/app/matchmaking-function-grpc-plugin-server-go" ]

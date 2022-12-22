@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
-	matchfunctiongrpc "plugin-arch-grpc-server-go/pkg/pb"
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 )
 
 // MatchFunctionServer is for the handler (upper level of match logic)
