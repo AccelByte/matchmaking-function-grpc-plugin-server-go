@@ -34,7 +34,7 @@ message ValidateTicketRequest {
   Rules rules = 2;
 }
 message ValidateTicketResponse {
-  bool valid = 1;
+  bool valid_ticket = 1;
 }
 
 // Make Matches
