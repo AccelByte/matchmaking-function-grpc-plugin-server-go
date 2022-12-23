@@ -32,7 +32,7 @@ func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfuncti
 
 func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
-	return &matchfunctiongrpc.ValidateTicketResponse{Valid: true}, nil
+	return &matchfunctiongrpc.ValidateTicketResponse{ValidTicket: true}, nil
 }
 
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {

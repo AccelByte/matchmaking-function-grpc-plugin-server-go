@@ -68,7 +68,7 @@ func TestValidateTicket(t *testing.T) {
 	assert.NotNil(t, s)
 	assert.NotNil(t, ok)
 	assert.Nil(t, err)
-	assert.Equal(t, ok.Valid, true)
+	assert.Equal(t, ok.ValidTicket, true)
 }
 
 func TestMatch(t *testing.T) {
