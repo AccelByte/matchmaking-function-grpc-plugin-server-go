@@ -4,16 +4,15 @@
 
 syntax = "proto3";
 
+option csharp_namespace = "AccelByte.MatchmakingV2.MatchFunction";
+option go_package = "accelbyte.net/matchmakingv2/matchfunction";
 option java_multiple_files = true;
-option go_package = "matchmaking-function-grpc-plugin-server-go/matchfunctiongrpc";
-option java_package = "net.accelbyte.matchmaking.matchfunction.grpc";
-option java_outer_classname = "MatchFunctionProto";
-option objc_class_prefix = "MFG";
+option java_package = "net.accelbyte.matchmakingv2.matchfunction";
 
-package matchfunctiongrpc;
+package matchfunction;
+
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
-
 
 service MatchFunction {
   rpc GetStatCodes(GetStatCodesRequest) returns (StatCodesResponse);
