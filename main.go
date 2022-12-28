@@ -15,15 +15,19 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
-	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
+	prometheusGrpc "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"google.golang.org/grpc/reflection"
@@ -99,25 +103,43 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(
-			otelgrpc.UnaryServerInterceptor(),
-			grpcPrometheus.UnaryServerInterceptor,
-			server.EnsureValidToken,
-		),
-		grpc.ChainStreamInterceptor(
-			otelgrpc.StreamServerInterceptor(),
-			grpcPrometheus.StreamServerInterceptor,
-		),
+	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
+		otelgrpc.UnaryServerInterceptor(),
+		prometheusGrpc.UnaryServerInterceptor,
+	}
+	streamServerInterceptors := []grpc.StreamServerInterceptor{
+		otelgrpc.StreamServerInterceptor(),
+		prometheusGrpc.StreamServerInterceptor,
 	}
 
-	s := grpc.NewServer(opts...)
+	if strings.ToLower(server.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
+		refreshInterval := server.GetEnvInt("REFRESH_INTERVAL", 600)
+		configRepo := sdkAuth.DefaultConfigRepositoryImpl()
+		tokenRepo := sdkAuth.DefaultTokenRepositoryImpl()
+		authService := iam.OAuth20Service{
+			Client:           factory.NewIamClient(configRepo),
+			ConfigRepository: configRepo,
+			TokenRepository:  tokenRepo,
+		}
+		server.Validator = server.NewTokenValidator(authService, time.Duration(refreshInterval)*time.Second)
+		server.Validator.Initialize()
+
+		unaryServerInterceptors = append(unaryServerInterceptors, server.UnaryAuthServerIntercept)
+		streamServerInterceptors = append(streamServerInterceptors, server.StreamAuthServerIntercept)
+		logrus.Infof("added auth interceptors")
+	}
+
+	// Create gRPC Server
+	s := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(unaryServerInterceptors...),
+		grpc.ChainStreamInterceptor(streamServerInterceptors...),
+	)
 
 	// Create non-global registry.
 	registry := prometheus.NewRegistry()
 
 	// Create some standard server metrics.
-	grpcMetrics := grpcPrometheus.NewServerMetrics()
+	grpcMetrics := prometheusGrpc.NewServerMetrics()
 
 	// Add go runtime metrics and process collectors.
 	registry.MustRegister(
@@ -127,7 +149,7 @@ func main() {
 	)
 
 	// prometheus metrics
-	grpcPrometheus.Register(s)
+	prometheusGrpc.Register(s)
 	go func() {
 		http.Handle("/metrics", server.NewMetrics(
 			registry, nil).
