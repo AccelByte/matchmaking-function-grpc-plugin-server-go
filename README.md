@@ -3,7 +3,7 @@
 This repository contains `gRPC server` sample app (Go) for AccelByte Cloud service matchmaking function customization.
 The `gRPC server` is a part of AccelByte Cloud service customization gRPC plugin architecture.
 
-```mermaid\
+```mermaid
 flowchart LR
    subgraph AB Cloud Service
    CL[gRPC Client]
