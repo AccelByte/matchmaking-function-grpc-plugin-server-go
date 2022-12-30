@@ -1,6 +1,7 @@
 # matchmaking-function-grpc-plugin-server-go
 
-This repository contains `gRPC server` sample app (Go) for AccelByte Cloud service matchmaking function customization.
+This repository contains `gRPC server` sample app (Go) for AccelByte Cloud service `matchmaking function` customization.
+
 The `gRPC server` is a part of AccelByte Cloud service customization gRPC plugin architecture.
 
 ```mermaid
@@ -102,9 +103,9 @@ The functionality of `gRPC server` methods can be tested in local development en
 
 2. Make sure this sample `gRPC server` is also up and running.
 
-3. Run the corresponding `gRPC client` as a stand in for the actual `gRPC client` in AccelByte Cloud, for example `matchmaking-function-grpc-plugin-client-java`.
+3. Run the corresponding `gRPC client` as a stand in for the actual `gRPC client` in AccelByte Cloud, for example `matchmaking-function-grpc-plugin-client-go`.
 
-   a. Clone `matchmaking-function-grpc-plugin-client-java` repository. 
+   a. Clone `matchmaking-function-grpc-plugin-client-go` repository. 
 
    b. Follow the `README.md` inside to setup, build, and run it.
 
