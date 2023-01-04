@@ -140,6 +140,7 @@ func main() {
 
 	// Create some standard server metrics.
 	grpcMetrics := prometheusGrpc.NewServerMetrics()
+	grpcMetrics.EnableHandlingTimeHistogram()
 
 	// Add go runtime metrics and process collectors.
 	registry.MustRegister(
