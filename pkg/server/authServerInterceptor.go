@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
 var (
-	Validator AuthTokenValidator
+	Validator validator.AuthTokenValidator
 )
 
 func UnaryAuthServerIntercept(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -80,8 +81,8 @@ func getResourceName() string {
 	return GetEnv("AB_RESOURCE_NAME", "MMV2GRPCSERVICE")
 }
 
-func getRequiredPermission() Permission {
-	return Permission{
+func getRequiredPermission() validator.Permission {
+	return validator.Permission{
 		Action:   getAction(),
 		Resource: fmt.Sprintf("NAMESPACE:%s:%s", getNamespace(), getResourceName()),
 	}

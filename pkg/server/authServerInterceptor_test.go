@@ -12,6 +12,7 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,16 +57,16 @@ func TestTokenValidator_ValidateToken(t *testing.T) {
 
 	namespace := "accelbyte"
 	resourceName := "MMV2GRPCSERVICE"
-	requiredPermission := Permission{
+	requiredPermission := validator.Permission{
 		Action:   2,
 		Resource: fmt.Sprintf("NAMESPACE:%s:%s", namespace, resourceName),
 	}
 
-	validator := NewTokenValidator(authService, time.Hour)
-	validator.Initialize()
+	tokenValidator := validator.NewTokenValidator(authService, time.Hour)
+	tokenValidator.Initialize()
 
 	// Act
-	err = validator.Validate(accessToken, &requiredPermission, &namespace, nil)
+	err = tokenValidator.Validate(accessToken, &requiredPermission, &namespace, nil)
 
 	// Assert
 	assert.Nil(t, err)

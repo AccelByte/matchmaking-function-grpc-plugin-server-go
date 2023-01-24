@@ -3,7 +3,7 @@ module matchmaking-function-grpc-plugin-server-go
 go 1.18
 
 require (
-	github.com/AccelByte/accelbyte-go-sdk v0.31.0
+	github.com/AccelByte/accelbyte-go-sdk v0.36.0
 	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/golang/protobuf v1.5.2
@@ -53,7 +53,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/willf/bitset v1.1.11 // indirect
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.4.0 // indirect
