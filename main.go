@@ -24,13 +24,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	prometheusGrpc "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
@@ -174,7 +176,13 @@ func main() {
 		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
 	})
 	logrus.Infof("adding the grpc reflection.")
-	reflection.Register(s) // self documentation for the server
+
+	// Enable gRPC Reflection
+	reflection.Register(s)
+	logrus.Infof("gRPC reflection enabled")
+
+	// Enable gRPC Health Check
+	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
 	logrus.Printf("gRPC server listening at %v", lis.Addr())
 
 	logrus.Infof("listening...")
