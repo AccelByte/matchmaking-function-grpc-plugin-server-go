@@ -20,6 +20,7 @@ import (
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -123,7 +124,7 @@ func main() {
 			ConfigRepository: configRepo,
 			TokenRepository:  tokenRepo,
 		}
-		server.Validator = server.NewTokenValidator(authService, time.Duration(refreshInterval)*time.Second)
+		server.Validator = validator.NewTokenValidator(authService, time.Duration(refreshInterval)*time.Second)
 		server.Validator.Initialize()
 
 		unaryServerInterceptors = append(unaryServerInterceptors, server.UnaryAuthServerIntercept)
