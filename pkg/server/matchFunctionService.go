@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
+
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 )
 
@@ -58,7 +59,6 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 			logrus.Errorf("error receiving from stream: %v", err)
 			return err
 		}
-
 		if inParameters, isParameters := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters); isParameters {
 			ruleObject := &GameRules{}
 
@@ -109,5 +109,35 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 			return errors.New("invalid input")
 		}
 
+	}
+}
+
+func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunction_BackfillMatchesServer) error {
+	ctx := server.Context()
+	defer ctx.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		in, err := server.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		if backfillTicket := in.GetBackfillTicket(); backfillTicket != nil {
+			proposal := &matchfunctiongrpc.BackfillResponse{
+				BackfillProposal: &matchfunctiongrpc.BackfillProposal{},
+			}
+			if err := server.Send(proposal); err != nil {
+				return err
+			}
+		}
 	}
 }
