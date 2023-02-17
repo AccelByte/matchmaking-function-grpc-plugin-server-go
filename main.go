@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
@@ -138,29 +139,22 @@ func main() {
 		grpc.ChainStreamInterceptor(streamServerInterceptors...),
 	)
 
+	// prometheus metrics
+	prometheusGrpc.Register(s)
+	prometheusGrpc.EnableHandlingTimeHistogram()
+
 	// Create non-global registry.
 	registry := prometheus.NewRegistry()
 
-	// Create some standard server metrics.
-	grpcMetrics := prometheusGrpc.NewServerMetrics()
-	grpcMetrics.EnableHandlingTimeHistogram()
-
 	// Add go runtime metrics and process collectors.
 	registry.MustRegister(
-		grpcMetrics,
+		prometheusGrpc.DefaultServerMetrics,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
-	// prometheus metrics
-	prometheusGrpc.Register(s)
 	go func() {
-		http.Handle("/metrics", server.NewMetrics(
-			registry, nil).
-			WrapHandler("/metrics", promhttp.HandlerFor(
-				registry,
-				promhttp.HandlerOpts{}),
-			))
+		http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	logrus.Printf("prometheus metrics served at :8080/metrics")
@@ -223,8 +217,6 @@ func main() {
 
 	flag.Parse()
 
-	// Initialize all metrics.
-	grpcMetrics.InitializeMetrics(s)
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()
 }
