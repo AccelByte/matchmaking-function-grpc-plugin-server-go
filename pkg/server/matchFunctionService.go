@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 )
@@ -34,6 +35,24 @@ func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfuncti
 func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
 	logrus.Info("validate ticket")
 	return &matchfunctiongrpc.ValidateTicketResponse{ValidTicket: true}, nil
+}
+
+func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfunctiongrpc.EnrichTicketRequest) (*matchfunctiongrpc.EnrichTicketResponse, error) {
+	logrus.Info("enrich ticket")
+	// this will enrich ticket with these hardcoded ticket attributes
+	enrichMap := map[string]*structpb.Value{
+		"mmr":        structpb.NewNumberValue(250.0),
+		"teamrating": structpb.NewNumberValue(2000.0),
+	}
+
+	if req.Ticket.TicketAttributes == nil {
+		req.Ticket.TicketAttributes = &structpb.Struct{Fields: enrichMap}
+	} else {
+		for key, value := range enrichMap {
+			req.Ticket.TicketAttributes.Fields[key] = value
+		}
+	}
+	return &matchfunctiongrpc.EnrichTicketResponse{Ticket: req.Ticket}, nil
 }
 
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
@@ -92,6 +111,7 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 							},
 						},
 						RegionPreferences: []string{"any"},
+						ClientVersion:     "v0.0.1",
 					},
 				}
 
