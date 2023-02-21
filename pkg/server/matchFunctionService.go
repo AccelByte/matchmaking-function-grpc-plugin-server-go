@@ -45,7 +45,7 @@ func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfuncti
 		"teamrating": structpb.NewNumberValue(2000.0),
 	}
 
-	if req.Ticket.TicketAttributes == nil {
+	if req.Ticket.TicketAttributes == nil || req.Ticket.TicketAttributes.Fields == nil {
 		req.Ticket.TicketAttributes = &structpb.Struct{Fields: enrichMap}
 	} else {
 		for key, value := range enrichMap {
