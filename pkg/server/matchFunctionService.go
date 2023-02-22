@@ -111,6 +111,7 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 							},
 						},
 						RegionPreferences: []string{"any"},
+						ServerName:        "matchmaking01",
 						ClientVersion:     "v0.0.1",
 					},
 				}
