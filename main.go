@@ -222,5 +222,5 @@ func main() {
 
 	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	<-ctx.Done()
-	fmt.Println("Goodbye...")
+	fmt.Println("\nGoodbye...")
 }

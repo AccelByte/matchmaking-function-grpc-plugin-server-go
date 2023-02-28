@@ -62,6 +62,7 @@ func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interf
 	logrus.Info("MATCHMAKER: make matches")
 	results := make(chan matchmaker.Match)
 	ctx := context.Background()
+	//TODO stream this like we do in Bleve Matchmaker
 	go func() {
 		defer close(results)
 		var unmatchedTickets []matchmaker.Ticket
