@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
@@ -167,8 +168,10 @@ func main() {
 		return
 	}
 
+	matchMaker := server.New()
 	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
 		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
+		MM:                               matchMaker,
 	})
 	logrus.Infof("adding the grpc reflection.")
 
@@ -217,6 +220,7 @@ func main() {
 
 	flag.Parse()
 
-	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
+	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	<-ctx.Done()
+	fmt.Println("Goodbye...")
 }
