@@ -14,6 +14,7 @@ import (
 	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 )
 
+// MatchfunctionTicketToProtoTicket will convert a matchmaker ticket to a proto ticket
 func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 	// convert ticket attributes to proto struct
 	ticketAttrs, err := structpb.NewStruct(ticket.TicketAttributes)
@@ -47,6 +48,7 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 	}
 }
 
+// ProtoTicketToMatchfunctionTicket will convert a proto ticket to a matchmaker ticket
 func ProtoTicketToMatchfunctionTicket(ticket *Ticket) matchmaker.Ticket {
 	return matchmaker.Ticket{
 		TicketID:  ticket.TicketId,
@@ -65,6 +67,7 @@ func ProtoTicketToMatchfunctionTicket(ticket *Ticket) matchmaker.Ticket {
 	}
 }
 
+// ProtoMatchToMatchfunctionMatch will convert a proto match to a matchmaker match
 func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 	return matchmaker.Match{
 		Tickets: pie.Map(match.Tickets, func(m *Ticket) matchmaker.Ticket {
@@ -94,6 +97,7 @@ func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 	}
 }
 
+// MatchfunctionMatchToProtoMatch will conert a matchmaker match to a proto match
 func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 	matchAttrs, mErr := structpb.NewStruct(match.MatchAttributes)
 	if mErr != nil {
@@ -117,6 +121,7 @@ func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 }
 
 // TODO: update to consider userID and partyID relationship
+// ProtoBackfillProposalToMatchfunctionBackfillProposal will convert a proto backfill proposal to a matchmaker backfill proposal
 func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposal) matchmaker.BackfillProposal {
 	return matchmaker.BackfillProposal{
 		BackfillTicketID: match.BackfillTicketId,
@@ -146,6 +151,7 @@ func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposa
 	}
 }
 
+// MatchfunctionBackfillTicketToProtoBackfillTicket will convert a matchmaker backfill ticket to a proto backfill ticket
 func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.BackfillTicket) *BackfillTicket {
 	match := backfillTicket.PartialMatch
 	// convert ticket attributes to proto struct

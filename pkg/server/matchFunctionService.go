@@ -25,20 +25,24 @@ type MatchFunctionServer struct {
 	unmatchedTickets []*matchmaker.Ticket
 }
 
+// matchTicketProvider contains the go channel of matchmaker tickets needed for making matches
 type matchTicketProvider struct {
 	channelTickets chan matchmaker.Ticket
 }
 
+// GetTickets will return the go channel of tickets from the matchTicketProvider
 func (m matchTicketProvider) GetTickets() chan matchmaker.Ticket {
 	return m.channelTickets
 }
 
+// GetBackfillTickets
 func (m matchTicketProvider) GetBackfillTickets() chan matchmaker.BackfillTicket {
 	c := make(chan matchmaker.BackfillTicket)
 	close(c)
 	return c
 }
 
+// GetStatCodes uses the assigned MatchMaker to get the stat codes of the ruleset
 func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfunctiongrpc.GetStatCodesRequest) (*matchfunctiongrpc.StatCodesResponse, error) {
 
 	rules, err := m.MM.RulesFromJSON(req.Rules.Json)
@@ -48,13 +52,12 @@ func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfuncti
 	}
 
 	codes := m.MM.GetStatCodes(rules)
-	logrus.Infof("stat codes: %s", codes)
 	return &matchfunctiongrpc.StatCodesResponse{Codes: codes}, nil
 }
 
+// ValidateTicket uses the assigned MatchMaker to validate the ticket
 func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
-	logrus.Info("SERVER: validate ticket")
-	//return &matchfunctiongrpc.ValidateTicketResponse{ValidTicket: true}, nil
+	logrus.Info("GRPC SERVICE: validate ticket")
 
 	rules, err := m.MM.RulesFromJSON(req.Rules.Json)
 	if err != nil {
@@ -63,28 +66,13 @@ func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunc
 
 	matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(req.Ticket)
 
-	logrus.Infof("ValidateTicket in Namespace: %s", matchTicket.Namespace)
-
 	validTicket, err := m.MM.ValidateTicket(matchTicket, rules)
 	return &matchfunctiongrpc.ValidateTicketResponse{ValidTicket: validTicket}, err
 }
 
+// EnrichTicket uses the assigned MatchMaker to enrich the ticket
 func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfunctiongrpc.EnrichTicketRequest) (*matchfunctiongrpc.EnrichTicketResponse, error) {
-	logrus.Info("SERVER: enrich ticket")
-	//// this will enrich ticket with these hardcoded ticket attributes
-	//enrichMap := map[string]*structpb.Value{
-	//	"mmr":        structpb.NewNumberValue(250.0),
-	//	"teamrating": structpb.NewNumberValue(2000.0),
-	//}
-	//
-	//if req.Ticket.TicketAttributes == nil || req.Ticket.TicketAttributes.Fields == nil {
-	//	req.Ticket.TicketAttributes = &structpb.Struct{Fields: enrichMap}
-	//} else {
-	//	for key, value := range enrichMap {
-	//		req.Ticket.TicketAttributes.Fields[key] = value
-	//	}
-	//}
-	//return &matchfunctiongrpc.EnrichTicketResponse{Ticket: req.Ticket}, nil
+	logrus.Info("GRPC SERVICE: enrich ticket")
 	matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(req.Ticket)
 	enrichedTicket, err := m.MM.EnrichTicket(matchTicket, req.Rules)
 	if err != nil {
@@ -94,9 +82,11 @@ func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfuncti
 	return &matchfunctiongrpc.EnrichTicketResponse{Ticket: newTicket}, nil
 }
 
+// MakeMatches uses the assigned MatchMaker to build matches and sends them back to the client
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
-	logrus.Info("SERVER: make matches")
+	logrus.Info("GRPC SERVICE: make matches")
 	matchesMade := 0
+
 	in, err := server.Recv()
 	if err != nil {
 		logrus.Errorf("error during stream Recv: %s", err)
@@ -128,12 +118,12 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 		for {
 			req, err := server.Recv()
 			if err == io.EOF {
-				logrus.Infof("SERVER: %s", err)
+				logrus.Infof("GRPC SERVICE: %s", err)
 				close(ticketProvider.channelTickets)
 				return
 			}
 			if err != nil {
-				logrus.Errorf("SERVER: recv %s", err)
+				logrus.Errorf("GRPC SERVICE: recv %s", err)
 				return
 			}
 			t, ok := req.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket)
@@ -142,9 +132,9 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 				return
 			}
 
-			logrus.Info("SERVER: crafting a matchfunctions.Ticket")
+			logrus.Info("GRPC SERVICE: crafting a matchfunctions.Ticket")
 			matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(t.Ticket)
-			logrus.Infof("SERVER: writing match ticket: %+v", matchTicket)
+			logrus.Infof("GRPC SERVICE: writing match ticket: %+v", matchTicket)
 			ticketProvider.channelTickets <- matchTicket
 		}
 	}()
@@ -153,9 +143,9 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	go func() {
 		defer wg.Done()
 		for result := range resultChan {
-			logrus.Info("SERVER: crafting a MatchResponse")
+			logrus.Info("GRPC SERVICE: crafting a MatchResponse")
 			resp := matchfunctiongrpc.MatchResponse{Match: matchfunctiongrpc.MatchfunctionMatchToProtoMatch(result)}
-			logrus.Infof("SERVER: match made and being sent back to the client: %+v", &resp)
+			logrus.Infof("GRPC SERVICE: match made and being sent back to the client: %+v", &resp)
 			if err := server.Send(&resp); err != nil {
 				logrus.Errorf("error on server send: %s", err)
 				return
@@ -165,11 +155,12 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	}()
 	wg.Wait()
 
-	logrus.Infof("SERVER: make matches finished and %d matches were made", matchesMade)
+	logrus.Infof("GRPC SERVICE: make matches finished and %d matches were made", matchesMade)
 	return nil
 
 }
 
+// BackfillMatches uses the assigned MatchMaker to run backfill
 func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunction_BackfillMatchesServer) error {
 	ctx := server.Context()
 	defer ctx.Done()
