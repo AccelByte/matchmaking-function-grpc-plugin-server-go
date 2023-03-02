@@ -8,11 +8,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	tp "google.golang.org/protobuf/types/known/timestamppb"
-
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 
 	"google.golang.org/grpc"
@@ -54,12 +57,12 @@ func TestValidateTicket(t *testing.T) {
 	var rule interface{}
 	dRules, _ := json.Marshal(rule)
 	rules := &matchfunctiongrpc.Rules{Json: string(dRules)}
-	ticket := &matchfunctiongrpc.Ticket{
-		TicketId:  GenerateUUID(),
+	ticket := matchmaker.Ticket{
+		TicketID:  GenerateUUID(),
 		MatchPool: "",
 	}
 	a := &matchfunctiongrpc.ValidateTicketRequest{
-		Ticket: ticket,
+		Ticket: matchfunctiongrpc.MatchfunctionTicketToProtoTicket(ticket),
 		Rules:  rules,
 	}
 	ok, err := server.ValidateTicket(ctx, a)
@@ -74,43 +77,62 @@ func TestValidateTicket(t *testing.T) {
 func TestMatch(t *testing.T) {
 	// prepare
 	s := grpc.NewServer()
+	server := New()
+	madeMatches := 0
+	ticketProvider := matchTicketProvider{make(chan matchmaker.Ticket)}
+	var tickets []matchmaker.Ticket
 
 	r := GameRules{
 		ShipCountMin: 0,
 		ShipCountMax: 1,
 	}
 
-	var players []*matchfunctiongrpc.Ticket_PlayerData
-	for i := 1; i <= 4; i++ {
-		p := &matchfunctiongrpc.Ticket_PlayerData{
-			PlayerId:   fmt.Sprintf("player%d", i),
-			Attributes: nil,
+	matches := server.MakeMatches(ticketProvider, r)
+	var wg sync.WaitGroup
+	var players []player.PlayerData
+
+	// build tickets with only a single player
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(ticketProvider.channelTickets)
+		for i := 1; i <= 4; i++ {
+			logrus.Infof("looping through %d time", i)
+			p := player.PlayerData{
+				PlayerID:   player.IDFromString(fmt.Sprintf("player%d", i)),
+				PartyID:    "",
+				Attributes: nil,
+			}
+			players = append(players, p)
+
+			ticket := matchmaker.Ticket{
+				TicketID:         GenerateUUID(),
+				MatchPool:        "",
+				CreatedAt:        time.Now(),
+				Players:          players,
+				TicketAttributes: nil,
+				Latencies:        nil,
+			}
+			ticketProvider.channelTickets <- ticket
+			tickets = append(tickets, ticket)
+			players = nil
 		}
-		players = append(players, p)
-	}
+	}()
 
-	ticket := matchfunctiongrpc.Ticket{
-		TicketId:         GenerateUUID(),
-		MatchPool:        "",
-		CreatedAt:        &tp.Timestamp{Seconds: 10},
-		Players:          players,
-		TicketAttributes: nil,
-		Latencies:        nil,
-	}
+	// range through matches channel
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for match := range matches {
+			logrus.Infof("got a match: %+v", match.Tickets)
+			madeMatches++
+		}
+	}()
 
-	// act
-	var tickets []matchfunctiongrpc.Ticket
-	results := make([]Match, 0)
-	tickets = append(tickets, ticket)
-	server := MatchMaker{unmatchedTickets: tickets}
-	matches := server.MakeMatches(r)
-
-	for match := range matches {
-		results = append(results, match)
-	}
+	//wait for ticket writing and matching to be done
+	wg.Wait()
 
 	// assert
 	assert.NotNil(t, s)
-	assert.Equal(t, 1, len(results))
-	assert.Equal(t, 4, len(players))
+	assert.Equal(t, len(tickets)/2, madeMatches)
 }
