@@ -13,8 +13,8 @@ flowchart LR
    DS --- SV
 ```
 
-`AccelByte Cloud` capabilities can be extended using custom functions implemented in a `gRPC server`.
-If configured, custom functions in the `gRPC server` will be called by `AccelByte Cloud` instead of the default function.
+`AccelByte Gaming Services` capabilities can be extended using custom functions implemented in a `gRPC server`.
+If configured, custom functions in the `gRPC server` will be called by `AccelByte Gaming Services` instead of the default function.
 
 The `gRPC server` and the `gRPC client` can actually communicate directly. 
 However, additional services are necessary to provide **security**, **reliability**, **scalability**, and **observability**. 
@@ -28,7 +28,7 @@ It contains a docker compose which consists of these `dependency services`.
 ## Overview
 
 This repository contains `sample matchmaking function gRPC server app` written in `Go`, It provides simple custom
-matchmaking function implementation for matchmaking service in AccelByte Cloud. 
+matchmaking function implementation for matchmaking service in AccelByte Gaming Services. 
 It will simply match 2 or any configured number of players coming into the function.
 
 This sample app also shows how this `gRPC server` can be instrumented for better observability.
@@ -53,7 +53,7 @@ in [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependenc
 
     f. go 1.18
 
-2. AccelByte Cloud demo environment.
+2. AccelByte Gaming Services demo environment.
 
     a. Base URL: https://demo.accelbyte.io
 
@@ -178,10 +178,10 @@ The functionality of `gRPC server` methods can be tested in local development en
    ```
 
 
-### Integration Test with AccelByte Cloud
+### Integration Test with AccelByte Gaming Services
 
 After testing functionality in local development environment, 
-to allow the actual `gRPC client` in AccelByte Cloud demo environment to access `gRPC server` 
+to allow the actual `gRPC client` in AccelByte Gaming Services demo environment to access `gRPC server` 
 in local development environment without requiring a public IP address, we can use [ngrok](https://ngrok.com/).
 
 1. Start the `dependency services` by following the `README.md` in the [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) repository.
