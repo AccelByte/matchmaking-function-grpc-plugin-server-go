@@ -1,3 +1,7 @@
+// Copyright (c) 2023 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
 package player
 
 // PlayerData is an id for a player along with a collection of arbitrary data used for matching this player with others

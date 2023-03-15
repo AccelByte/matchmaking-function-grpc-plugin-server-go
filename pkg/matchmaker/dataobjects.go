@@ -1,8 +1,13 @@
+// Copyright (c) 2023 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
 package matchmaker
 
 import (
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 	"time"
+
+	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 )
 
 // Ticket represents a matchmaking request in a particular match pool for one or more players
