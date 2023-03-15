@@ -7,7 +7,7 @@ require (
 	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922 // indirect
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/elliotchance/pie/v2 v2.4.0
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -24,7 +24,6 @@ require (
 )
 
 require (
-	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
