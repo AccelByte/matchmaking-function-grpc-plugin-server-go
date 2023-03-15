@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rvolosatovs/protoc:3.3.0 as proto
+FROM --platform=$BUILDPLATFORM rvolosatovs/protoc:4.0.0 as proto
 WORKDIR /build
 COPY pkg/proto pkg/proto
 RUN mkdir -p pkg/pb

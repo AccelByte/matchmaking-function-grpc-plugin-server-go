@@ -5,7 +5,8 @@
 SHELL := /bin/bash
 
 GOLANG_DOCKER_IMAGE := golang:1.18
-IMAGE_NAME := $(shell basename "$$(pwd)")-app
+IMAGE_NAME ?= $(shell basename "$$(pwd)")-app
+IMAGE_VERSION ?= latest
 
 proto:
 	rm -rfv pkg/pb/*
@@ -32,11 +33,17 @@ image:
 	docker buildx build -t ${IMAGE_NAME} --load .
 
 imagex:
-	docker buildx inspect ${IMAGE_NAME}-builder \
-			|| docker buildx create --name ${IMAGE_NAME}-builder --use 
-	docker buildx build -t ${IMAGE_NAME} --platform linux/arm64/v8,linux/amd64 .
-	docker buildx build -t ${IMAGE_NAME} --load .
-	#docker buildx rm ${IMAGE_NAME}-builder
+	docker buildx inspect my-builder \
+			|| docker buildx create --name my-builder --use
+	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --platform linux/arm64/v8,linux/amd64 .
+	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --load .
+	#docker buildx rm my-builder
+
+imagex-push:
+	docker buildx inspect my-builder-2 \
+			|| docker buildx create --name my-builder-2 --use
+	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --platform linux/amd64 --push .
+	#docker buildx rm my-builder-2
 
 test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \

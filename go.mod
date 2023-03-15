@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/AccelByte/accelbyte-go-sdk v0.36.0
-	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922
+	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922 // indirect
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0

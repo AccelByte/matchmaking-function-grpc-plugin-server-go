@@ -1,5 +1,5 @@
 Dockerfile
 Makefile
-pkg/pb
+pkg/pb/*.pb.go
 .cache/
 .env
