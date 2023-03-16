@@ -6,7 +6,8 @@ require (
 	github.com/AccelByte/accelbyte-go-sdk v0.36.0
 	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922 // indirect
 	github.com/AccelByte/go-jose v2.1.4+incompatible
-	github.com/golang/protobuf v1.5.2
+	github.com/elliotchance/pie/v2 v2.4.0
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -59,6 +60,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/aws v1.4.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
+	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705 // indirect
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
