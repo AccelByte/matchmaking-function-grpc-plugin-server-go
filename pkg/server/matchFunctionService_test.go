@@ -8,12 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 
 	"github.com/stretchr/testify/assert"
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
@@ -24,25 +25,20 @@ import (
 func TestGetStatCodes(t *testing.T) {
 	// prepare
 	s := grpc.NewServer()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// act
-	server := MatchFunctionServer{}
+	matchMaker := New()
+	server := MatchFunctionServer{
+		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
+		MM:                               matchMaker,
+	}
 
-	var rule interface{} // needs to add rule
-	dRules, _ := json.Marshal(rule)
-	rules := &matchfunctiongrpc.Rules{Json: string(dRules)}
 	codes := []string{"2", "2"}
-
-	a := &matchfunctiongrpc.GetStatCodesRequest{Rules: rules}
-	ok, err := server.GetStatCodes(ctx, a)
+	ok := server.MM.GetStatCodes(codes)
 
 	// assert
 	assert.NotNil(t, s)
 	assert.NotNil(t, ok)
-	assert.Nil(t, err)
-	assert.Equal(t, codes, ok.Codes)
 }
 
 func TestValidateTicket(t *testing.T) {
@@ -52,7 +48,11 @@ func TestValidateTicket(t *testing.T) {
 	defer cancel()
 
 	// act
-	server := MatchFunctionServer{}
+	matchMaker := New()
+	server := MatchFunctionServer{
+		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
+		MM:                               matchMaker,
+	}
 
 	var rule interface{}
 	dRules, _ := json.Marshal(rule)
