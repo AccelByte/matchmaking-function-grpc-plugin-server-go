@@ -8,7 +8,7 @@ without any checks. Below are descriptions of what each of these MatchMaker's fu
 Does not perform a validation check and returns `true`, making the ticket valid.
 
 ### EnrichTicket()
-Checks it the match ticket's `TicketAttributes` map is empty -- if so, it will add in a
+Checks if the match ticket's `TicketAttributes` map is empty -- if so, it will add in a
 key-value number.
 
 ### GetStatCodes()
