@@ -204,7 +204,7 @@ func main() {
 	// instrumentation in the future will default to using it.
 	otel.SetTracerProvider(tp)
 	// Register the B3 propagator globally.
-	p := b3.New()
+	p := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		p,
 		propagation.TraceContext{},
