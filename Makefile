@@ -7,6 +7,7 @@ SHELL := /bin/bash
 GOLANG_DOCKER_IMAGE := golang:1.18
 IMAGE_NAME ?= $(shell basename "$$(pwd)")-app
 IMAGE_VERSION ?= latest
+BUILDER := grpc-plugin-server-builder
 
 proto:
 	rm -rfv pkg/pb/*.pb.go
@@ -33,17 +34,16 @@ image:
 	docker buildx build -t ${IMAGE_NAME} --load .
 
 imagex:
-	docker buildx inspect my-builder \
-			|| docker buildx create --name my-builder --use
-	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --platform linux/arm64/v8,linux/amd64 .
-	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --load .
-	#docker buildx rm my-builder
+	docker buildx inspect $(BUILDER) || docker buildx create --name $(BUILDER) --use
+	docker buildx build -t ${IMAGE_NAME} --platform linux/arm64/v8,linux/amd64 .
+	docker buildx build -t ${IMAGE_NAME} --load .
+	docker buildx rm --keep-state $(BUILDER)
 
-imagex-push:
-	docker buildx inspect my-builder-2 \
-			|| docker buildx create --name my-builder-2 --use
-	docker buildx build -t ${IMAGE_NAME}:${IMAGE_VERSION} --platform linux/amd64 --push .
-	#docker buildx rm my-builder-2
+imagex_push:
+	@test -n "$(IMAGE_VERSION)" || (echo "IMAGE_VERSION is not set"; exit 1)
+	docker buildx inspect $(BUILDER) || docker buildx create --name $(BUILDER) --use
+	docker buildx build -t ${IMAGE_PREFIX}${IMAGE_NAME}:${IMAGE_VERSION} --platform linux/arm64/v8,linux/amd64 --push .
+	docker buildx rm --keep-state $(BUILDER)
 
 test: proto
 	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
