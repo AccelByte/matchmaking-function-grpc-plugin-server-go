@@ -8,10 +8,11 @@ import (
 	"context"
 	"encoding/json"
 
-	pie_ "github.com/elliotchance/pie/v2"
-	"github.com/sirupsen/logrus"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+
+	pie_ "github.com/elliotchance/pie/v2"
+	"github.com/sirupsen/logrus"
 )
 
 // New returns a MatchMaker of the MatchLogic interface
@@ -23,6 +24,7 @@ func New() MatchLogic {
 func (b MatchMaker) ValidateTicket(matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error) {
 	logrus.Info("MATCHMAKER: validate ticket")
 	logrus.Info("Ticket Validation successful")
+
 	return true, nil
 }
 
@@ -37,12 +39,14 @@ func (b MatchMaker) EnrichTicket(matchTicket matchmaker.Ticket, ruleSet interfac
 		matchTicket.TicketAttributes = enrichMap
 		logrus.Infof("EnrichedTicket Attributes: %+v", matchTicket.TicketAttributes)
 	}
+
 	return matchTicket, nil
 }
 
 // GetStatCodes returns the string slice of the stat codes in matchrules
 func (b MatchMaker) GetStatCodes(matchRules interface{}) []string {
 	logrus.Infof("MATCHMAKER: stat codes: %s", []string{})
+
 	return []string{}
 }
 
@@ -53,6 +57,7 @@ func (b MatchMaker) RulesFromJSON(jsonRules string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ruleSet, nil
 }
 
@@ -70,16 +75,19 @@ func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interf
 			case ticket, ok := <-nextTicket:
 				if !ok {
 					logrus.Info("MATCHMAKER: there are no tickets to create a match with")
+
 					return
 				}
 				logrus.Infof("MATCHMAKER: got a ticket: %s", ticket.TicketID)
 				unmatchedTickets = buildMatch(ticket, unmatchedTickets, results)
 			case <-ctx.Done():
 				logrus.Info("MATCHMAKER: CTX Done triggered")
+
 				return
 			}
 		}
 	}()
+
 	return results
 }
 
@@ -105,5 +113,6 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 		unmatchedTickets = nil
 	}
 	logrus.Info("MATCHMAKER: not enough tickets to build a match")
+
 	return unmatchedTickets
 }

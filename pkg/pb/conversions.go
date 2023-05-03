@@ -5,13 +5,14 @@
 package matchfunction
 
 import (
+	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+
 	pie_ "github.com/elliotchance/pie/v2"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/runtime/protoimpl"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 )
 
 // MatchfunctionTicketToProtoTicket will convert a matchmaker ticket to a proto ticket
@@ -34,6 +35,7 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 			if paErr != nil {
 				logrus.Errorf("failed to create new proto struct for player attributes")
 			}
+
 			return &Ticket_PlayerData{
 				state:      protoimpl.MessageState{},
 				sizeCache:  0,
@@ -103,6 +105,7 @@ func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 	if mErr != nil {
 		logrus.Errorf("error on structpb for match attributes")
 	}
+
 	return &Match{
 		Tickets: pie_.Map(match.Tickets, func(ticket matchmaker.Ticket) *Ticket {
 			return MatchfunctionTicketToProtoTicket(ticket)
@@ -120,7 +123,7 @@ func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 	}
 }
 
-// TODO: update to consider userID and partyID relationship
+// "TODO: update to consider userID and partyID relationship"
 // ProtoBackfillProposalToMatchfunctionBackfillProposal will convert a proto backfill proposal to a matchmaker backfill proposal
 func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposal) matchmaker.BackfillProposal {
 	return matchmaker.BackfillProposal{
@@ -178,6 +181,7 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 			if paErr != nil {
 				logrus.Errorf("failed to create new proto struct for player attributes")
 			}
+
 			return &Ticket_PlayerData{
 				state:      protoimpl.MessageState{},
 				sizeCache:  0,
@@ -185,6 +189,7 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 				Attributes: playerAttrs,
 			}
 		})
+
 		return &Ticket{
 			state:            protoimpl.MessageState{},
 			sizeCache:        0,
@@ -198,6 +203,7 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 			Namespace:        t.Namespace,
 		}
 	})
+
 	return &BackfillTicket{
 		state:     protoimpl.MessageState{},
 		sizeCache: 0,

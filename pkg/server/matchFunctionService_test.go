@@ -12,12 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/player"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/sirupsen/logrus"
+
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
+
+	"github.com/stretchr/testify/assert"
 
 	"google.golang.org/grpc"
 )
@@ -129,7 +131,7 @@ func TestMatch(t *testing.T) {
 		}
 	}()
 
-	//wait for ticket writing and matching to be done
+	// wait for ticket writing and matching to be done
 	wg.Wait()
 
 	// assert

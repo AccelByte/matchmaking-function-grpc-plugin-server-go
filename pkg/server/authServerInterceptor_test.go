@@ -29,7 +29,7 @@ func (c *MyConfigRepo) GetJusticeBaseUrl() string { return c.baseUrl }
 func TestTokenValidator_ValidateToken(t *testing.T) {
 	// Arrange
 	baseUrl := "https://development.accelbyte.io"
-	clientId := "4eb9c4f862fe452e8d675c3030f25912" // TODO mock and remove hardcode
+	clientId := "4eb9c4f862fe452e8d675c3030f25912" // "TODO: mock and remove hardcode"
 	clientSecret := ""
 	configRepo := &MyConfigRepo{
 		baseUrl:      baseUrl,
@@ -46,12 +46,14 @@ func TestTokenValidator_ValidateToken(t *testing.T) {
 	err := authService.LoginClient(&clientId, &clientSecret)
 	if err != nil {
 		assert.Fail(t, err.Error())
+
 		return
 	}
 
 	accessToken, err := authService.GetToken()
 	if err != nil {
 		assert.Fail(t, err.Error())
+
 		return
 	}
 
