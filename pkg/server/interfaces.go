@@ -1,3 +1,7 @@
+// Copyright (c) 2022 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
 package server
 
 import "matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
@@ -20,7 +24,7 @@ stop looking for matches and close the result channel.
 ValidateTicket should return false AND api.ErrInvalidRequest when a ticket is not allowed to be queued
 */
 type MatchLogic interface {
-	//TODO add in scope
+	// "TODO: add in scope"
 	MakeMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match
 	RulesFromJSON(json string) (interface{}, error)
 	GetStatCodes(matchRules interface{}) []string

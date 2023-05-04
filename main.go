@@ -22,10 +22,12 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -108,13 +110,27 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	opts := []logging.Option{
+		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall, logging.PayloadReceived, logging.PayloadSent),
+		logging.WithFieldsFromContext(func(ctx context.Context) logging.Fields {
+			if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
+				return logging.Fields{"traceID", span.TraceID().String()}
+			}
+
+			return nil
+		}),
+		logging.WithLevels(logging.DefaultClientCodeToLevel),
+		logging.WithDurationField(logging.DurationToDurationField),
+	}
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
 		otelgrpc.UnaryServerInterceptor(),
 		prometheusGrpc.UnaryServerInterceptor,
+		logging.UnaryServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		otelgrpc.StreamServerInterceptor(),
 		prometheusGrpc.StreamServerInterceptor,
+		logging.StreamServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
 	}
 
 	if strings.ToLower(server.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
@@ -222,5 +238,5 @@ func main() {
 
 	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	<-ctx.Done()
-	fmt.Println("\nGoodbye...")
+	logrus.Println("Goodbye...")
 }

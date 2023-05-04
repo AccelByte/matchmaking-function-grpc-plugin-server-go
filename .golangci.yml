@@ -74,7 +74,7 @@ linters:
     - forcetypeassert
     - gochecknoglobals
 
-  fast: false
+  fast: true
 
 linters-settings:
   govet:
