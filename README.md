@@ -43,7 +43,7 @@ in [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependenc
 
     b. make
 
-    c. docker
+    c. docker v23.x
 
     d. docker-compose v2
 
@@ -122,7 +122,7 @@ The functionality of `gRPC server` methods can be tested in local development en
    docker-compose up --build
    ```
 
-3. Open `postman`, create a new `gRPC request`, and enter `localhost:10000` as server URL. 
+3. Open `postman`, create a new `gRPC request` (tutorial [here](https://blog.postman.com/postman-now-supports-grpc/)), and enter `localhost:10000` as server URL. 
 
    > :exclamation: We are essentially accessing the `gRPC server` through an `Envoy` proxy which is a part of `dependency services`.
 
