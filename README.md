@@ -59,6 +59,8 @@ in [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependenc
 
     i. [postman](https://www.postman.com/)
 
+2. A local copy of [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) repository.
+
 3. AccelByte Gaming Services demo environment.
 
     a. Base URL: https://demo.accelbyte.io
