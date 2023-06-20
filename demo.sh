@@ -7,7 +7,7 @@
 set -e
 set -o pipefail
 
-test -n "$NGROK_URL" || (echo "NGROK_URL is not set"; exit 1)
+test -n "$GRPC_SERVER_URL" || (echo "GRPC_SERVER_URL is not set"; exit 1)
 test -n "$AB_CLIENT_ID" || (echo "AB_CLIENT_ID is not set"; exit 1)
 test -n "$AB_CLIENT_SECRET" || (echo "AB_CLIENT_SECRET is not set"; exit 1)
 test -n "$AB_NAMESPACE" || (echo "AB_NAMESPACE is not set"; exit 1)
@@ -37,11 +37,11 @@ echo Creating rule sets ...
 
 curl -s "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/rulesets" -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' -d "{\"data\":{\"shipCountMin\":2,\"shipCountMax\":2},\"name\":\"${DEMO_PREFIX}_ruleset\"}"
 
-echo Registering match function \(replace exising\) $NGROK_URL ...
+echo Registering match function \(replace exising\) $GRPC_SERVER_URL ...
 
 curl -s -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions/${DEMO_PREFIX}_function" -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null
 
-curl -s "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' -d "{\"match_function\":\"${DEMO_PREFIX}_function\",\"url\":\"$NGROK_URL\"}"
+curl -s "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' -d "{\"match_function\":\"${DEMO_PREFIX}_function\",\"url\":\"$GRPC_SERVER_URL\"}"
 
 echo Creating match pool ...
 
