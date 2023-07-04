@@ -77,7 +77,7 @@ func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunc
 
 // EnrichTicket uses the assigned MatchMaker to enrich the ticket
 func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfunctiongrpc.EnrichTicketRequest) (*matchfunctiongrpc.EnrichTicketResponse, error) {
-	logrus.Info("GRPC SERVICE: enrich ticket")
+	logrus.Infof("GRPC SERVICE: enrich ticket: %s \n", LogJSONFormatter(req.Ticket))
 	matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(req.Ticket)
 	enrichedTicket, err := m.MM.EnrichTicket(matchTicket, req.Rules)
 	if err != nil {
@@ -85,7 +85,10 @@ func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfuncti
 	}
 	newTicket := matchfunctiongrpc.MatchfunctionTicketToProtoTicket(enrichedTicket)
 
-	return &matchfunctiongrpc.EnrichTicketResponse{Ticket: newTicket}, nil
+	response := &matchfunctiongrpc.EnrichTicketResponse{Ticket: newTicket}
+	logrus.Infof("Response enrich ticket: %s \n", LogJSONFormatter(response))
+
+	return response, nil
 }
 
 // MakeMatches uses the assigned MatchMaker to build matches and sends them back to the client
@@ -117,6 +120,8 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 		return err
 	}
 
+	logrus.Infof("Request: %s \n", LogJSONFormatter(rules))
+
 	ticketProvider := matchTicketProvider{make(chan matchmaker.Ticket)}
 	resultChan := m.MM.MakeMatches(ticketProvider, rules)
 	wg := sync.WaitGroup{}
@@ -146,7 +151,7 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 
 			logrus.Info("GRPC SERVICE: crafting a matchfunctions.Ticket")
 			matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(t.Ticket)
-			logrus.Infof("GRPC SERVICE: writing match ticket: %+v", matchTicket)
+			logrus.Infof("GRPC SERVICE: writing match ticket: %s", LogJSONFormatter(matchTicket))
 			ticketProvider.channelTickets <- matchTicket
 		}
 	}()
@@ -157,6 +162,7 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 		for result := range resultChan {
 			logrus.Info("GRPC SERVICE: crafting a MatchResponse")
 			resp := matchfunctiongrpc.MatchResponse{Match: matchfunctiongrpc.MatchfunctionMatchToProtoMatch(result)}
+			logrus.Infof("Response: %s", LogJSONFormatter(resp))
 			logrus.Infof("GRPC SERVICE: match made and being sent back to the client: %+v", &resp)
 			if err := server.Send(&resp); err != nil {
 				logrus.Errorf("error on server send: %s", err)
@@ -197,6 +203,7 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 			proposal := &matchfunctiongrpc.BackfillResponse{
 				BackfillProposal: &matchfunctiongrpc.BackfillProposal{},
 			}
+			logrus.Infof("Request: %s \n", LogJSONFormatter(proposal))
 			if err := server.Send(proposal); err != nil {
 				return err
 			}

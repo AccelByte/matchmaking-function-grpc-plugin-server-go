@@ -5,11 +5,13 @@
 package server
 
 import (
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 // GenerateUUID generates uuid without hyphens
@@ -35,4 +37,18 @@ func GetEnvInt(key string, fallback int) int {
 	}
 
 	return val
+}
+
+// LogJSONFormatter is printing the data in log
+func LogJSONFormatter(data interface{}) string {
+	response, err := json.Marshal(data)
+	if err != nil {
+		logrus.Errorf("failed to marshal json.")
+
+		return ""
+	} else {
+		logrus.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
+
+		return string(response)
+	}
 }
