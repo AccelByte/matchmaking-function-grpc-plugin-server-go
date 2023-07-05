@@ -230,10 +230,17 @@ in local development environment to the internet so that it can be called by
  
 > :warning: **Ngrok free plan has some limitations**: You may want to use paid plan if the traffic is high.
 
-## Pushing
+### Deploy to AccelByte Gaming Services
 
-To build and push this sample app multi-arch container image to AWS ECR, use the following command.
+After passing integration test against locally running sample app you may want to deploy the sample app to AGS (AccelByte Gaming Services).
 
-```
-make imagex_push REPO_URL=xxxxxxxxxx.dkr.ecr.us-west-2.amazonaws.com/accelbyte/justice/development/extend/xxxxxxxxxx/xxxxxxxxxx IMAGE_TAG=v0.0.1
-```
+1. Download and setup [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/)
+2. Create new Extend App on Admin Portal, please refer to docs [here](https://docs-preview.accelbyte.io/gaming-services/services/customization/using-custom-matchmaking/)
+3. Do docker login using `extend-helper-cli`, please refer to its documentation
+4. Build and push sample app docker image to AccelByte ECR using the following command inside sample app directory
+   ```
+   make imagex_push REPO_URL=xxxxxxxxxx.dkr.ecr.us-west-2.amazonaws.com/accelbyte/justice/development/extend/xxxxxxxxxx/xxxxxxxxxx IMAGE_TAG=v0.0.1
+   ```
+   > Note: the REPO_URL is obtained from step 2 in the app detail on the 'Repository Url' field
+
+Please refer to [getting started docs](https://docs-preview.accelbyte.io/gaming-services/services/customization/using-custom-matchmaking/) for more detailed steps on how to deploy sample app to AccelByte Gaming Service.
