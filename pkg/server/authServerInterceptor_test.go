@@ -27,9 +27,11 @@ func (c *MyConfigRepo) GetClientSecret() string   { return c.clientSecret }
 func (c *MyConfigRepo) GetJusticeBaseUrl() string { return c.baseUrl }
 
 func TestTokenValidator_ValidateToken(t *testing.T) {
+	t.Skip() // "TODO: mock and remove hardcoded client id and secret"
+
 	// Arrange
 	baseUrl := "https://development.accelbyte.io"
-	clientId := "4eb9c4f862fe452e8d675c3030f25912" // "TODO: mock and remove hardcode"
+	clientId := ""
 	clientSecret := ""
 	configRepo := &MyConfigRepo{
 		baseUrl:      baseUrl,
