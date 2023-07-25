@@ -21,23 +21,20 @@ import (
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
+	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
+	promgrpc "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-
-	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
-
-	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
-	prometheusGrpc "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/propagators/b3"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
@@ -47,6 +44,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 	"matchmaking-function-grpc-plugin-server-go/pkg/server"
 
 	"google.golang.org/grpc"
@@ -57,16 +55,7 @@ const (
 	id          = 1
 )
 
-var (
-	service = os.Getenv("OTEL_SERVICE_NAME")
-	port    = flag.Int("port", 6565, "The grpc server port")
-	res     = resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(service),
-		attribute.String("environment", environment),
-		attribute.Int64("ID", id),
-	)
-)
+var port = flag.Int("port", 6565, "The grpc server port")
 
 func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.TracerProvider, error) {
 	// Create Zipkin Exporter and install it as a global tracer.
@@ -79,7 +68,7 @@ func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.Trace
 		logrus.Fatalf("failed to call zipkin exporter. %s", err.Error())
 	}
 
-	res = resource.NewWithAttributes(
+	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(os.Getenv("OTEL_SERVICE_NAME")),
 		attribute.String("environment", environment),
@@ -102,9 +91,7 @@ func main() {
 	go func() {
 		runtime.SetBlockProfileRate(1)
 		runtime.SetMutexProfileFraction(10)
-		_ = http.ListenAndServe(":6060", nil)
 	}()
-	logrus.Printf("pprof served at :6060")
 
 	logrus.Infof("starting app server.")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -122,14 +109,15 @@ func main() {
 		logging.WithLevels(logging.DefaultClientCodeToLevel),
 		logging.WithDurationField(logging.DurationToDurationField),
 	}
+	srvMetrics := promgrpc.NewServerMetrics()
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
 		otelgrpc.UnaryServerInterceptor(),
-		prometheusGrpc.UnaryServerInterceptor,
+		srvMetrics.UnaryServerInterceptor(),
 		logging.UnaryServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		otelgrpc.StreamServerInterceptor(),
-		prometheusGrpc.StreamServerInterceptor,
+		srvMetrics.StreamServerInterceptor(),
 		logging.StreamServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
 	}
 
@@ -156,22 +144,30 @@ func main() {
 		grpc.ChainStreamInterceptor(streamServerInterceptors...),
 	)
 
-	// prometheus metrics
-	prometheusGrpc.Register(s)
-	prometheusGrpc.EnableHandlingTimeHistogram()
+	matchMaker := server.New()
+	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
+		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
+		MM:                               matchMaker,
+	})
 
-	// Create non-global registry.
-	registry := prometheus.NewRegistry()
+	// Enable gRPC Reflection
+	reflection.Register(s)
+	logrus.Infof("gRPC reflection enabled")
+
+	// Enable gRPC Health Check
+	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
 
 	// Add go runtime metrics and process collectors.
-	registry.MustRegister(
-		prometheusGrpc.DefaultServerMetrics,
+	srvMetrics.InitializeMetrics(s)
+	promRegistry := prometheus.NewRegistry()
+	promRegistry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		srvMetrics,
 	)
 
 	go func() {
-		http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+		http.Handle("/metrics", promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}))
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	logrus.Printf("prometheus metrics served at :8080/metrics")
@@ -184,19 +180,6 @@ func main() {
 		return
 	}
 
-	matchMaker := server.New()
-	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
-		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
-		MM:                               matchMaker,
-	})
-	logrus.Infof("adding the grpc reflection.")
-
-	// Enable gRPC Reflection
-	reflection.Register(s)
-	logrus.Infof("gRPC reflection enabled")
-
-	// Enable gRPC Health Check
-	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
 	logrus.Printf("gRPC server listening at %v", lis.Addr())
 
 	logrus.Infof("listening...")

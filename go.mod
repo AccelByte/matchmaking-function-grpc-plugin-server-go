@@ -9,11 +9,10 @@ require (
 	github.com/elliotchance/pie/v2 v2.4.0
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0
-	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.36.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.11.1
 	go.opentelemetry.io/otel v1.11.1
@@ -23,7 +22,11 @@ require (
 	google.golang.org/protobuf v1.30.0
 )
 
-require github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.5
+require (
+	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.0-rc.0
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.5
+	go.opentelemetry.io/otel/trace v1.11.1
+)
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -60,7 +63,6 @@ require (
 	github.com/willf/bitset v1.1.11 // indirect
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.4.0 // indirect
-	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
 	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705 // indirect
 	golang.org/x/net v0.8.0 // indirect
