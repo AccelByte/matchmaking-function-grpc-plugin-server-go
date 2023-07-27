@@ -5,24 +5,24 @@
 package matchmaker
 
 import (
-	"time"
+	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+	"time"
 )
 
-// Ticket represents a matchmaking request in a particular match pool for one or more players
+// Ticket represents a matchmaking request in a particular match pool for one or more players.
 type Ticket struct {
 	Namespace        string
 	PartySessionID   string
 	TicketID         string
 	MatchPool        string
 	CreatedAt        time.Time
-	Players          []player.PlayerData
+	Players          []playerdata.PlayerData
 	TicketAttributes map[string]interface{}
 	Latencies        map[string]int64
 }
 
-// BackfillTicket represents a match result that needs additional players
+// BackfillTicket represents a match result that needs additional players.
 type BackfillTicket struct {
 	TicketID       string
 	MatchPool      string
@@ -31,7 +31,7 @@ type BackfillTicket struct {
 	MatchSessionID string
 }
 
-// BackfillProposal represents a proposal to update a match with additional players
+// BackfillProposal represents a proposal to update a match with additional players.
 type BackfillProposal struct {
 	BackfillTicketID string
 	CreatedAt        time.Time
@@ -42,12 +42,12 @@ type BackfillProposal struct {
 	MatchSessionID   string
 }
 
-// Team is a set of players that have been matched onto the same team
+// Team is a set of players that have been matched onto the same team.
 type Team struct {
-	UserIDs []player.ID
+	UserIDs []playerdata.ID
 }
 
-// Match represents a matchmaking result with players placed on teams and tracking which tickets were included in the match
+// Match represents a matchmaking result with players placed on teams and tracking which tickets were included in the match.
 type Match struct {
 	Tickets          []Ticket
 	Teams            []Team

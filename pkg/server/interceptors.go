@@ -41,8 +41,8 @@ func NewGRPCStreamServerInterceptor() grpc.StreamServerInterceptor {
 // InterceptorLogger adapts logrus logger to interceptor logger.
 // This code is referenced from https://github.com/grpc-ecosystem/go-grpc-middleware/
 func InterceptorLogger(l logrus.FieldLogger) logging.Logger {
-	return logging.LoggerFunc(func(_ context.Context, lvl logging.Level, msg string, fields ...any) {
-		f := make(map[string]any, len(fields)/2)
+	return logging.LoggerFunc(func(_ context.Context, lvl logging.Level, msg string, fields ...interface{}) {
+		f := make(map[string]interface{}, len(fields)/2)
 		i := logging.Fields(fields).Iterator()
 		if i.Next() {
 			k, v := i.At()
