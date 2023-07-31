@@ -55,7 +55,10 @@ const (
 	id          = 1
 )
 
-var port = flag.Int("port", 6565, "The grpc server port")
+var (
+	port        = flag.Int("port", 6565, "The grpc server port")
+	logLevelStr = server.GetEnv("LOG_LEVEL", logrus.InfoLevel.String())
+)
 
 func initProvider(ctx context.Context, grpcServer *grpc.Server) (*sdktrace.TracerProvider, error) {
 	// Create Zipkin Exporter and install it as a global tracer.
@@ -97,7 +100,14 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := []logging.Option{
+	logrusLevel, err := logrus.ParseLevel(logLevelStr)
+	if err != nil {
+		logrusLevel = logrus.InfoLevel
+	}
+	logrusLogger := logrus.New()
+	logrusLogger.SetLevel(logrusLevel)
+
+	loggingOptions := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall, logging.PayloadReceived, logging.PayloadSent),
 		logging.WithFieldsFromContext(func(ctx context.Context) logging.Fields {
 			if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
@@ -113,12 +123,12 @@ func main() {
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
 		otelgrpc.UnaryServerInterceptor(),
 		srvMetrics.UnaryServerInterceptor(),
-		logging.UnaryServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
+		logging.UnaryServerInterceptor(server.InterceptorLogger(logrusLogger), loggingOptions...),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		otelgrpc.StreamServerInterceptor(),
 		srvMetrics.StreamServerInterceptor(),
-		logging.StreamServerInterceptor(server.InterceptorLogger(logrus.New()), opts...),
+		logging.StreamServerInterceptor(server.InterceptorLogger(logrusLogger), loggingOptions...),
 	}
 
 	if strings.ToLower(server.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
@@ -139,26 +149,26 @@ func main() {
 	}
 
 	// Create gRPC Server
-	s := grpc.NewServer(
+	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(unaryServerInterceptors...),
 		grpc.ChainStreamInterceptor(streamServerInterceptors...),
 	)
 
 	matchMaker := server.New()
-	matchfunctiongrpc.RegisterMatchFunctionServer(s, &server.MatchFunctionServer{
+	matchfunctiongrpc.RegisterMatchFunctionServer(grpcServer, &server.MatchFunctionServer{
 		UnimplementedMatchFunctionServer: matchfunctiongrpc.UnimplementedMatchFunctionServer{},
 		MM:                               matchMaker,
 	})
 
 	// Enable gRPC Reflection
-	reflection.Register(s)
+	reflection.Register(grpcServer)
 	logrus.Infof("gRPC reflection enabled")
 
 	// Enable gRPC Health Check
-	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
+	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
 
 	// Add go runtime metrics and process collectors.
-	srvMetrics.InitializeMetrics(s)
+	srvMetrics.InitializeMetrics(grpcServer)
 	promRegistry := prometheus.NewRegistry()
 	promRegistry.MustRegister(
 		collectors.NewGoCollector(),
@@ -184,7 +194,7 @@ func main() {
 
 	logrus.Infof("listening...")
 	go func() {
-		if err = s.Serve(lis); err != nil {
+		if err = grpcServer.Serve(lis); err != nil {
 			logrus.Fatalf("failed to serve: %v", err)
 
 			return
@@ -192,7 +202,7 @@ func main() {
 	}()
 
 	logrus.Infof("starting init provider.")
-	tp, err := initProvider(ctx, s)
+	tp, err := initProvider(ctx, grpcServer)
 	if err != nil {
 		logrus.Fatalf("failed to initializing the provider. %s", err.Error())
 
