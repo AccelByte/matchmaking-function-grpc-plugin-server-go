@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	pie_ "github.com/elliotchance/pie/v2"
 	"github.com/sirupsen/logrus"
@@ -98,7 +98,7 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 	if len(unmatchedTickets) == 2 {
 		logrus.Info("MATCHMAKER: I have enough tickets to match!")
 		players := append(unmatchedTickets[0].Players, unmatchedTickets[1].Players...)
-		playerIDs := pie_.Map(players, player.ToID)
+		playerIDs := pie_.Map(players, playerdata.ToID)
 		match := matchmaker.Match{
 			RegionPreference: []string{"any"},
 			Tickets:          make([]matchmaker.Ticket, 2),

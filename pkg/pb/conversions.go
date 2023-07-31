@@ -6,7 +6,7 @@ package matchfunction
 
 import (
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	pie_ "github.com/elliotchance/pie/v2"
 	"github.com/sirupsen/logrus"
@@ -30,16 +30,16 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 		TicketId:      ticket.TicketID,
 		MatchPool:     ticket.MatchPool,
 		CreatedAt:     timestamppb.New(ticket.CreatedAt),
-		Players: pie_.Map(ticket.Players, func(p player.PlayerData) *Ticket_PlayerData {
+		Players: pie_.Map(ticket.Players, func(p playerdata.PlayerData) *Ticket_PlayerData {
 			playerAttrs, paErr := structpb.NewStruct(p.Attributes)
 			if paErr != nil {
-				logrus.Errorf("failed to create new proto struct for player attributes")
+				logrus.Errorf("failed to create new proto struct for playerdata attributes")
 			}
 
 			return &Ticket_PlayerData{
 				state:      protoimpl.MessageState{},
 				sizeCache:  0,
-				PlayerId:   player.IDToString(p.PlayerID),
+				PlayerId:   playerdata.IDToString(p.PlayerID),
 				Attributes: playerAttrs,
 			}
 		}),
@@ -56,9 +56,9 @@ func ProtoTicketToMatchfunctionTicket(ticket *Ticket) matchmaker.Ticket {
 		TicketID:  ticket.TicketId,
 		MatchPool: ticket.MatchPool,
 		CreatedAt: ticket.CreatedAt.AsTime(),
-		Players: pie_.Map(ticket.Players, func(p *Ticket_PlayerData) player.PlayerData {
-			return player.PlayerData{
-				PlayerID:   player.IDFromString(p.PlayerId),
+		Players: pie_.Map(ticket.Players, func(p *Ticket_PlayerData) playerdata.PlayerData {
+			return playerdata.PlayerData{
+				PlayerID:   playerdata.IDFromString(p.PlayerId),
 				Attributes: p.Attributes.AsMap(),
 			}
 		}),
@@ -77,8 +77,8 @@ func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 				TicketID:  m.TicketId,
 				MatchPool: m.MatchPool,
 				CreatedAt: m.CreatedAt.AsTime(),
-				Players: pie_.Map(m.Players, func(p *Ticket_PlayerData) player.PlayerData {
-					return player.PlayerData{PlayerID: player.IDFromString(p.PlayerId), Attributes: p.Attributes.AsMap()}
+				Players: pie_.Map(m.Players, func(p *Ticket_PlayerData) playerdata.PlayerData {
+					return playerdata.PlayerData{PlayerID: playerdata.IDFromString(p.PlayerId), Attributes: p.Attributes.AsMap()}
 				}),
 				TicketAttributes: m.TicketAttributes.AsMap(),
 				Latencies:        m.Latencies,
@@ -87,8 +87,8 @@ func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 			}
 		}),
 		Teams: pie_.Map(match.Teams, func(team *Match_Team) matchmaker.Team {
-			return matchmaker.Team{UserIDs: pie_.Map(team.UserIds, func(p string) player.ID {
-				return player.ID(p)
+			return matchmaker.Team{UserIDs: pie_.Map(team.UserIds, func(p string) playerdata.ID {
+				return playerdata.ID(p)
 			})}
 		}),
 		RegionPreference: match.RegionPreferences,
@@ -111,8 +111,8 @@ func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 			return MatchfunctionTicketToProtoTicket(ticket)
 		}),
 		Teams: pie_.Map(match.Teams, func(team matchmaker.Team) *Match_Team {
-			return &Match_Team{UserIds: pie_.Map(team.UserIDs, func(x player.ID) string {
-				return player.IDToString(x)
+			return &Match_Team{UserIds: pie_.Map(team.UserIDs, func(x playerdata.ID) string {
+				return playerdata.IDToString(x)
 			})}
 		}),
 		RegionPreferences: match.RegionPreference,
@@ -134,8 +134,8 @@ func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposa
 				TicketID:  m.TicketId,
 				MatchPool: m.MatchPool,
 				CreatedAt: m.CreatedAt.AsTime(),
-				Players: pie_.Map(m.Players, func(p *Ticket_PlayerData) player.PlayerData {
-					return player.PlayerData{PlayerID: player.IDFromString(p.PlayerId), Attributes: p.Attributes.AsMap()}
+				Players: pie_.Map(m.Players, func(p *Ticket_PlayerData) playerdata.PlayerData {
+					return playerdata.PlayerData{PlayerID: playerdata.IDFromString(p.PlayerId), Attributes: p.Attributes.AsMap()}
 				}),
 				TicketAttributes: m.TicketAttributes.AsMap(),
 				Latencies:        m.Latencies,
@@ -144,8 +144,8 @@ func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposa
 			}
 		}),
 		ProposedTeams: pie_.Map(match.ProposedTeams, func(team *BackfillProposal_Team) matchmaker.Team {
-			return matchmaker.Team{UserIDs: pie_.Map(team.UserIds, func(p string) player.ID {
-				return player.ID(p)
+			return matchmaker.Team{UserIDs: pie_.Map(team.UserIds, func(p string) playerdata.ID {
+				return playerdata.ID(p)
 			})}
 		}),
 		MatchPool:      match.MatchPool,
@@ -164,8 +164,8 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 	}
 	var backfillTeams []*BackfillTicket_Team
 	for _, team := range match.Teams {
-		userIDs := pie_.Map(team.UserIDs, func(p player.ID) string {
-			return player.IDToString(p)
+		userIDs := pie_.Map(team.UserIDs, func(p playerdata.ID) string {
+			return playerdata.IDToString(p)
 		})
 		if len(userIDs) > 0 {
 			backfillTeams = append(backfillTeams, &BackfillTicket_Team{UserIds: userIDs})
@@ -176,16 +176,16 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 		if err != nil {
 			logrus.Errorf("error on structpb for ticket attributes")
 		}
-		playerData := pie_.Map(t.Players, func(p player.PlayerData) *Ticket_PlayerData {
+		playerData := pie_.Map(t.Players, func(p playerdata.PlayerData) *Ticket_PlayerData {
 			playerAttrs, paErr := structpb.NewStruct(p.Attributes)
 			if paErr != nil {
-				logrus.Errorf("failed to create new proto struct for player attributes")
+				logrus.Errorf("failed to create new proto struct for playerdata attributes")
 			}
 
 			return &Ticket_PlayerData{
 				state:      protoimpl.MessageState{},
 				sizeCache:  0,
-				PlayerId:   player.IDToString(p.PlayerID),
+				PlayerId:   playerdata.IDToString(p.PlayerID),
 				Attributes: playerAttrs,
 			}
 		})

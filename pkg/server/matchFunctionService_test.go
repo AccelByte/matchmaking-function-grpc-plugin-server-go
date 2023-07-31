@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-	"matchmaking-function-grpc-plugin-server-go/pkg/player"
+	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	"github.com/sirupsen/logrus"
 
@@ -91,17 +91,17 @@ func TestMatch(t *testing.T) {
 
 	matches := server.MakeMatches(ticketProvider, r)
 	var wg sync.WaitGroup
-	var players []player.PlayerData
+	var players []playerdata.PlayerData
 
-	// build tickets with only a single player
+	// build tickets with only a single playerdata
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer close(ticketProvider.channelTickets)
 		for i := 1; i <= 4; i++ {
 			logrus.Infof("looping through %d time", i)
-			p := player.PlayerData{
-				PlayerID:   player.IDFromString(fmt.Sprintf("player%d", i)),
+			p := playerdata.PlayerData{
+				PlayerID:   playerdata.IDFromString(fmt.Sprintf("playerdata%d", i)),
 				PartyID:    "",
 				Attributes: nil,
 			}
