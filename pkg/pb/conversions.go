@@ -69,6 +69,16 @@ func ProtoTicketToMatchfunctionTicket(ticket *Ticket) matchmaker.Ticket {
 	}
 }
 
+func ProtoTicketsToMatchfunctionTickets(tickets []*Ticket) []matchmaker.Ticket {
+	var result []matchmaker.Ticket
+
+	for _, ticket := range tickets {
+		result = append(result, ProtoTicketToMatchfunctionTicket(ticket))
+	}
+
+	return result
+}
+
 // ProtoMatchToMatchfunctionMatch will convert a proto match to a matchmaker match
 func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 	return matchmaker.Match{

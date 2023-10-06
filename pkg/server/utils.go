@@ -52,3 +52,28 @@ func logJSONFormatter(data interface{}) string {
 		return string(response)
 	}
 }
+
+func CheckDiff(aList, bList []string) (diffInA, diffInB []string) {
+	aMap := convertStringSliceToMap(aList)
+	bMap := convertStringSliceToMap(bList)
+	return compareDiffOfSlice(aList, bMap), compareDiffOfSlice(bList, aMap)
+}
+
+func convertStringSliceToMap(s []string) map[string]struct{} {
+	m := make(map[string]struct{}, len(s))
+	for _, v := range s {
+		m[v] = struct{}{}
+	}
+	return m
+}
+
+func compareDiffOfSlice(s []string, m map[string]struct{}) (diff []string) {
+	for _, v := range s {
+		_, exist := m[v]
+		if exist {
+			continue
+		}
+		diff = append(diff, v)
+	}
+	return diff
+}

@@ -57,3 +57,9 @@ type Match struct {
 	ServerName       string // fill this with local DS name from ticket, used for directing match session to local DS
 	ClientVersion    string // fill this with specific game version from ticket, for overriding DS version
 }
+
+// Region represents region latency data
+type Region struct {
+	Region  string `json:"region"`
+	Latency int    `json:"latency"`
+}
