@@ -210,17 +210,3 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 		}
 	}
 }
-
-// GetBestMatchRegion uses to get best match region in mmv2
-func (m *MatchFunctionServer) GetBestMatchRegion(ctx context.Context, req *matchfunctiongrpc.GetBestMatchRegionRequest) (*matchfunctiongrpc.RegionResponse, error) {
-	logrus.Info("GRPC SERVICE: get best match region")
-
-	tickets := matchfunctiongrpc.ProtoTicketsToMatchfunctionTickets(req.Tickets)
-
-	if tickets != nil {
-		region := m.MM.GetBestMatchRegion(tickets)
-		return &matchfunctiongrpc.RegionResponse{Region: region}, nil
-
-	}
-	return &matchfunctiongrpc.RegionResponse{Region: []string{}}, nil
-}

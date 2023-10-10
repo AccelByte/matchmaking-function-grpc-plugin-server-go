@@ -30,7 +30,6 @@ type MatchLogic interface {
 	GetStatCodes(matchRules interface{}) []string
 	ValidateTicket(matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error)
 	EnrichTicket(matchTicket matchmaker.Ticket, ruleSet interface{}) (ticket matchmaker.Ticket, err error)
-	GetBestMatchRegion(tickets []matchmaker.Ticket) []string
 }
 
 // TicketProvider provides a mechanism for a match function to get tickets from the match pool it's trying to make matches for

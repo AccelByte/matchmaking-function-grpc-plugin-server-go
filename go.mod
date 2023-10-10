@@ -26,7 +26,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.0-rc.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.5
 	go.opentelemetry.io/otel/trace v1.11.1
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 )
 
 require (
@@ -65,8 +64,9 @@ require (
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
+	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705 // indirect
 	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
