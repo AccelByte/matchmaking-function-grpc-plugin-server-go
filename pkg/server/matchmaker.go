@@ -7,14 +7,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"sort"
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	pie_ "github.com/elliotchance/pie/v2"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
 // New returns a MatchMaker of the MatchLogic interface
@@ -117,49 +115,4 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 	logrus.Info("MATCHMAKER: not enough tickets to build a match")
 
 	return unmatchedTickets
-}
-
-func (b MatchMaker) GetBestMatchRegion(tickets []matchmaker.Ticket) []string {
-	logrus.Info("MATCHMAKER: get best match region")
-	var regions []string
-	var allRegions []string
-	for _, ticket := range tickets {
-		var sortedLatency []matchmaker.Region
-		for region, latency := range ticket.Latencies {
-			sortedLatency = append(sortedLatency, matchmaker.Region{Region: region, Latency: int(latency)})
-		}
-		sort.SliceStable(sortedLatency, func(i, j int) bool {
-			return sortedLatency[i].Latency < sortedLatency[j].Latency
-		})
-
-		for k, latency := range sortedLatency {
-			if k == 0 {
-				regions = append(regions, latency.Region)
-			}
-
-			if !slices.Contains(allRegions, latency.Region) {
-				allRegions = append(allRegions, latency.Region)
-			}
-		}
-	}
-
-	if len(regions) > 0 {
-		counts := make(map[string]int)
-		for _, region := range regions {
-			counts[region]++
-		}
-
-		ratingRegions := make([]string, 0, len(counts))
-		for rating := range counts {
-			ratingRegions = append(ratingRegions, rating)
-		}
-		sort.Slice(ratingRegions, func(i, j int) bool { return counts[ratingRegions[i]] > counts[ratingRegions[j]] })
-
-		diff, _ := CheckDiff(allRegions, ratingRegions)
-		ratingRegions = append(ratingRegions, diff...)
-
-		return ratingRegions
-	}
-
-	return []string{}
 }
