@@ -25,9 +25,26 @@ get_code_challenge()
   echo -n "$1" | sha256sum | xxd -r -p | base64 -w 0 | sed -e 's/\+/-/g' -e 's/\//\_/g' -e 's/=//g'
 }
 
+function clean_up()
+{
+  echo Deleting match pool ...
+
+  curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-pools/${DEMO_PREFIX}_pool" -H "Authorization: Bearer $ACCESS_TOKEN"
+
+  echo Deleting rule sets ...
+
+  curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/rulesets/${DEMO_PREFIX}_ruleset" -H "Authorization: Bearer $ACCESS_TOKEN"
+
+  echo Deleting session template ...
+
+  curl -X DELETE "${AB_BASE_URL}/session/v1/admin/namespaces/$AB_NAMESPACE/configurations/${DEMO_PREFIX}_template" -H "Authorization: Bearer $ACCESS_TOKEN"
+}
+
 echo Logging in client ...
 
 ACCESS_TOKEN="$(curl -s ${AB_BASE_URL}/iam/v3/oauth/token -H 'Content-Type: application/x-www-form-urlencoded' -u "$AB_CLIENT_ID:$AB_CLIENT_SECRET" -d "grant_type=client_credentials" | jq --raw-output .access_token)"
+
+trap clean_up EXIT
 
 echo Creating session template ...
 
@@ -46,9 +63,6 @@ curl -s "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" -H "
 echo Creating match pool ...
 
 curl -s "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-pools" -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' -d "{\"backfill_ticket_expiration_seconds\":600,\"match_function\":\"${DEMO_PREFIX}_function\",\"name\":\"${DEMO_PREFIX}_pool\",\"rule_set\":\"${DEMO_PREFIX}_ruleset\",\"session_template\":\"${DEMO_PREFIX}_template\",\"ticket_expiration_seconds\":600}"
-
-echo "Press ENTER to run the matchmaking flow"
-read
 
 for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   echo Creating player $PLAYER_NUMBER ...
@@ -79,18 +93,3 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
 
   curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" -H "Authorization: Bearer $ACCESS_TOKEN"  # For demo only: In reality, player is not supposed to be deleted immediately after creating match ticket
 done
-
-echo "Press ENTER to clean up"
-read
-
-echo Deleting match pool ...
-
-curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-pools/${DEMO_PREFIX}_pool" -H "Authorization: Bearer $ACCESS_TOKEN"
-
-echo Deleting rule sets ...
-
-curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/rulesets/${DEMO_PREFIX}_ruleset" -H "Authorization: Bearer $ACCESS_TOKEN"
-
-echo Deleting session template ...
-
-curl -X DELETE "${AB_BASE_URL}/session/v1/admin/namespaces/$AB_NAMESPACE/configurations/${DEMO_PREFIX}_template" -H "Authorization: Bearer $ACCESS_TOKEN"
