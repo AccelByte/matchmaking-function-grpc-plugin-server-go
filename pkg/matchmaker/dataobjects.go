@@ -49,11 +49,19 @@ type Team struct {
 
 // Match represents a matchmaking result with players placed on teams and tracking which tickets were included in the match.
 type Match struct {
-	Tickets          []Ticket
-	Teams            []Team
-	RegionPreference []string // ordered list of
-	MatchAttributes  map[string]interface{}
-	Backfill         bool   // false for complete matches, true if more players are desired.
-	ServerName       string // fill this with local DS name from ticket, used for directing match session to local DS
-	ClientVersion    string // fill this with specific game version from ticket, for overriding DS version
+	Tickets                      []Ticket
+	Teams                        []Team
+	RegionPreference             []string // ordered list of
+	MatchAttributes              map[string]interface{}
+	Backfill                     bool   // false for complete matches, true if more players are desired.
+	ServerName                   string // fill this with local DS name from ticket, used for directing match session to local DS
+	ClientVersion                string // fill this with specific game version from ticket, for overriding DS version
+	ServerPoolSelectionParameter ServerPoolSelectionParameter
+}
+
+// ServerPoolSelectionParameter server selection parameter
+type ServerPoolSelectionParameter struct {
+	ServerProvider string   // "AMS" or empty for DS Armada
+	Deployment     string   // used by DS Armada if ServerProdiver is empty
+	ClaimKeys      []string // used by AMS if ServerProvider is AMS
 }

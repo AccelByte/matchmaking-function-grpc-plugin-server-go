@@ -96,6 +96,11 @@ func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 		Backfill:         match.Backfill,
 		ServerName:       match.ServerName,
 		ClientVersion:    match.ClientVersion,
+		ServerPoolSelectionParameter: matchmaker.ServerPoolSelectionParameter{
+			Deployment:     match.ServerPool.Deployment,
+			ServerProvider: match.ServerPool.ServerProvider,
+			ClaimKeys:      match.ServerPool.ClaimKeys,
+		},
 	}
 }
 
@@ -120,6 +125,11 @@ func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
 		Backfill:          match.Backfill,
 		ServerName:        match.ServerName,
 		ClientVersion:     match.ClientVersion,
+		ServerPool: &ServerPool{
+			ServerProvider: match.ServerPoolSelectionParameter.ServerProvider,
+			Deployment:     match.ServerPoolSelectionParameter.Deployment,
+			ClaimKeys:      match.ServerPoolSelectionParameter.ClaimKeys,
+		},
 	}
 }
 
