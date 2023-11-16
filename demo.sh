@@ -7,10 +7,15 @@
 set -e
 set -o pipefail
 
-test -n "$GRPC_SERVER_URL" || (echo "GRPC_SERVER_URL is not set"; exit 1)
+
 test -n "$AB_CLIENT_ID" || (echo "AB_CLIENT_ID is not set"; exit 1)
 test -n "$AB_CLIENT_SECRET" || (echo "AB_CLIENT_SECRET is not set"; exit 1)
 test -n "$AB_NAMESPACE" || (echo "AB_NAMESPACE is not set"; exit 1)
+
+if [ -z "$GRPC_SERVER_URL" ] && [ -z "$EXTEND_APP_NAME" ]; then
+  echo "GRPC_SERVER_URL or EXTEND_APP_NAME is not set"
+  exit 1
+fi
 
 DEMO_PREFIX='mmv2_grpc_demo'
 NUMBER_OF_PLAYERS=3
@@ -22,7 +27,7 @@ get_code_verifier()
 
 get_code_challenge()
 {
-  echo -n "$1" | sha256sum | xxd -r -p | base64 -w 0 | sed -e 's/\+/-/g' -e 's/\//\_/g' -e 's/=//g'
+  echo -n "$1" | sha256sum | xxd -r -p | base64 -w 0 | sed -e 's/+/-/g' -e 's/\//\_/g' -e 's/=//g'
 }
 
 function api_curl()
@@ -88,18 +93,37 @@ if ! cat http_code.out | grep -q '\(200\|201\|204\|302\)'; then
     exit 1
 fi
 
-echo Registering match function \(replace exising\) $GRPC_SERVER_URL ...
+if [ -n "$GRPC_SERVER_URL" ]; then
+  echo Registering match function URL \(replace exising\) $GRPC_SERVER_URL ...
 
-api_curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions/${DEMO_PREFIX}_function" \
-    -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null     # Ignore delete error for non-existing match function
+  api_curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions/${DEMO_PREFIX}_function" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null     # Ignore delete error for non-existing match function
 
-api_curl "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" \
-    -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
-    -d "{\"match_function\":\"${DEMO_PREFIX}_function\",\"url\":\"$GRPC_SERVER_URL\"}"
+  api_curl "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+      -d "{\"match_function\":\"${DEMO_PREFIX}_function\",\"url\":\"$GRPC_SERVER_URL\"}"
 
-if ! cat http_code.out | grep -q '\(200\|201\|204\|302\)'; then
-    cat http_response.out
-    exit 1
+  if ! cat http_code.out | grep -q '\(200\|201\|204\|302\)'; then
+      cat http_response.out
+      exit 1
+  fi
+elif [ -n "$EXTEND_APP_NAME" ]; then
+  echo Registering match function name \(replace exising\) $EXTEND_APP_NAME ...
+
+  api_curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions/${DEMO_PREFIX}_function" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null     # Ignore delete error for non-existing match function
+
+  api_curl "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-functions" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+      -d "{\"match_function\":\"${DEMO_PREFIX}_function\",\"serviceAppName\":\"$EXTEND_APP_NAME\"}"
+
+  if ! cat http_code.out | grep -q '\(200\|201\|204\|302\)'; then
+      cat http_response.out
+      exit 1
+  fi
+else
+  echo "GRPC_SERVER_URL or EXTEND_APP_NAME is not set"
+  exit 1
 fi
 
 echo Creating match pool ...
