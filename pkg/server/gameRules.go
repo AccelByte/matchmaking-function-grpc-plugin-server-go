@@ -4,7 +4,17 @@
 
 package server
 
+type AllianceRule struct {
+	MinNumber       int `json:"min_number" valid:"range(0|2147483647)"`
+	MaxNumber       int `json:"max_number" valid:"range(0|2147483647)"`
+	PlayerMinNumber int `json:"player_min_number" valid:"range(0|2147483647)"`
+	PlayerMaxNumber int `json:"player_max_number" valid:"range(0|2147483647)"`
+}
+
 type GameRules struct {
-	ShipCountMin int `json:"shipCountMin"`
-	ShipCountMax int `json:"shipCountMax"`
+	ShipCountMin         int          `json:"shipCountMin"`
+	ShipCountMax         int          `json:"shipCountMax"`
+	AutoBackfill         bool         `json:"auto_backfill"`
+	SendTicketOnBackfill bool         `json:"send_ticket_on_backfill"`
+	AllianceRule         AllianceRule `json:"alliance"`
 }

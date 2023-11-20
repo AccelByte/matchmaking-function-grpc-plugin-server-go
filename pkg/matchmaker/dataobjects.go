@@ -42,9 +42,15 @@ type BackfillProposal struct {
 	MatchSessionID   string
 }
 
-// Team is a set of players that have been matched onto the same team.
+// Team is a set of players that have been matched onto the same team
 type Team struct {
 	UserIDs []playerdata.ID
+	Parties []Party
+}
+
+type Party struct {
+	PartyID string   `json:"partyID"`
+	UserIDs []string `json:"userIDs"`
 }
 
 // Match represents a matchmaking result with players placed on teams and tracking which tickets were included in the match.

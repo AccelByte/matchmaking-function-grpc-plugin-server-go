@@ -25,6 +25,7 @@ ValidateTicket should return false AND api.ErrInvalidRequest when a ticket is no
 */
 type MatchLogic interface {
 	// "TODO: add in scope"
+	BackfillMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.BackfillProposal
 	MakeMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match
 	RulesFromJSON(json string) (interface{}, error)
 	GetStatCodes(matchRules interface{}) []string

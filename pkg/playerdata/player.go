@@ -27,3 +27,7 @@ func IDFromString(u string) ID {
 func ToID(p PlayerData) ID {
 	return p.PlayerID
 }
+
+func ToIDString(p PlayerData) string {
+	return string(p.PlayerID)
+}
