@@ -27,7 +27,7 @@ pipeline {
           gitCommitHash = git.getCommitHash()
           bitbucketCommitHref = "https://api.bitbucket.org/2.0/repositories/accelbyte/${gitRepositoryName}/commit/${gitCommitHash}"
           bitbucket.setBuildStatus(
-              bitbucketHttpsCredentials, bitbucketCommitHref, 'INPROGRESS', env.JOB_NAME,
+              bitbucketHttpsCredentials, bitbucketCommitHref, 'INPROGRESS', env.JOB_NAME.take(30),
               "${env.JOB_NAME}-${env.BUILD_NUMBER}", 'Jenkins', "${env.BUILD_URL}console")
         }
       }
@@ -65,14 +65,14 @@ pipeline {
     success {
       script {
         bitbucket.setBuildStatus(
-            bitbucketHttpsCredentials, bitbucketCommitHref, 'SUCCESSFUL', env.JOB_NAME,
+            bitbucketHttpsCredentials, bitbucketCommitHref, 'SUCCESSFUL', env.JOB_NAME.take(30),
             "${env.JOB_NAME}-${env.BUILD_NUMBER}", 'Jenkins', "${env.BUILD_URL}console")
       }
     }
     failure {
       script {
         bitbucket.setBuildStatus(
-            bitbucketHttpsCredentials, bitbucketCommitHref, 'FAILED', env.JOB_NAME,
+            bitbucketHttpsCredentials, bitbucketCommitHref, 'FAILED', env.JOB_NAME.take(30),
             "${env.JOB_NAME}-${env.BUILD_NUMBER}", 'Jenkins', "${env.BUILD_URL}console")
 
         message = """
