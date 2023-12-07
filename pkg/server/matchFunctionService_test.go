@@ -81,7 +81,7 @@ func TestMatch(t *testing.T) {
 	s := grpc.NewServer()
 	server := New()
 	madeMatches := 0
-	ticketProvider := matchTicketProvider{make(chan matchmaker.Ticket)}
+	ticketProvider := newMatchTicketProvider()
 	var tickets []matchmaker.Ticket
 
 	r := GameRules{

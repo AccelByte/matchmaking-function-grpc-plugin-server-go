@@ -5,9 +5,9 @@
 package matchmaker
 
 import (
-	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
-
 	"time"
+
+	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 )
 
 // Ticket represents a matchmaking request in a particular match pool for one or more players.
@@ -42,13 +42,14 @@ type BackfillProposal struct {
 	MatchSessionID   string
 }
 
-// Team is a set of players that have been matched onto the same team
+// Team is a set of players that have been matched onto the same team.
 type Team struct {
 	UserIDs []playerdata.ID
 	Parties []Party
 }
 
 type Party struct {
+	// nolint:tagliatelle
 	PartyID string   `json:"partyID"`
 	UserIDs []string `json:"userIDs"`
 }
@@ -65,7 +66,7 @@ type Match struct {
 	ServerPoolSelectionParameter ServerPoolSelectionParameter
 }
 
-// ServerPoolSelectionParameter server selection parameter
+// ServerPoolSelectionParameter server selection parameter.
 type ServerPoolSelectionParameter struct {
 	ServerProvider string   // "AMS" or empty for DS Armada
 	Deployment     string   // used by DS Armada if ServerProdiver is empty
