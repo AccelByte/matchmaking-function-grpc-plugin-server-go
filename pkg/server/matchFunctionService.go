@@ -135,12 +135,15 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			close(ticketProvider.channelTickets)
+			close(ticketProvider.channelBackfillTickets)
+		}()
+
 		for {
 			req, err := server.Recv()
 			if err == io.EOF {
 				log.Debug("Recv ended")
-				close(ticketProvider.channelTickets)
-				close(ticketProvider.channelBackfillTickets)
 
 				return
 			}
@@ -269,7 +272,7 @@ func (m *MatchFunctionServer) fetchBackfillTickets(ticketProvider matchTicketPro
 		if ticket := in.GetTicket(); ticket != nil {
 			t := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(ticket)
 			log.WithField("matchpool", t.MatchPool).
-				WithField("ticketId", t.TicketID).Info("Received ticket")
+				WithField("ticketId", t.TicketID).Info("Received match ticket")
 			ticketProvider.channelTickets <- t
 		} else if backfillTicket := in.GetBackfillTicket(); backfillTicket != nil {
 			t := matchfunctiongrpc.ProtoBackfillTicketToMatchfunctionBackfillTicket(backfillTicket)

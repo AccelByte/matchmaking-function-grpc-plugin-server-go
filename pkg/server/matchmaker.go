@@ -187,15 +187,15 @@ func (b MatchMaker) BackfillMatches(ticketProvider TicketProvider, matchRules in
 			select {
 			case ticket, ok := <-nextTicket:
 				if !ok {
-					log.Info("there are no tickets to backfill a match with")
+					log.Info("no more match tickets")
 					nextTicket = nil
 					continue
 				}
-				log.WithField("ticketId", ticket.TicketID).Infof("got a ticket")
+				log.WithField("ticketId", ticket.TicketID).Infof("got a match ticket")
 				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(&ticket, nil, unmatchedTickets, unmatchedBackfillTickets, rule, results)
 			case backfillTicket, ok := <-nextBackfillTicket:
 				if !ok {
-					log.Info("there are no backfill tickets to backfill a match with")
+					log.Info("no more backfill tickets")
 					nextBackfillTicket = nil
 					continue
 				}
@@ -216,35 +216,18 @@ func (b MatchMaker) BackfillMatches(ticketProvider TicketProvider, matchRules in
 func buildBackfillMatch(newTicket *matchmaker.Ticket, newBackfillTicket *matchmaker.BackfillTicket, unmatchedTickets []matchmaker.Ticket, unmatchedBackfillTickets []matchmaker.BackfillTicket, rule GameRules, results chan matchmaker.BackfillProposal) ([]matchmaker.Ticket, []matchmaker.BackfillTicket) {
 	log := logrus.WithField("method", "MATCHMAKER.buildBackfillMatch")
 
-	if !rule.SendTicketOnBackfill {
-		for _, backfillTicket := range unmatchedBackfillTickets {
-			log.Info("Send backfill proposal!")
-
-			proposedTeam := backfillTicket.PartialMatch.Teams
-
-			results <- matchmaker.BackfillProposal{
-				BackfillTicketID: backfillTicket.TicketID,
-				CreatedAt:        time.Time{},
-				AddedTickets:     []matchmaker.Ticket{},
-				ProposedTeams:    proposedTeam,
-				ProposalID:       "",
-				MatchPool:        backfillTicket.MatchPool,
-				MatchSessionID:   backfillTicket.MatchSessionID,
-			}
-		}
-		unmatchedBackfillTickets = nil
-		return unmatchedTickets, unmatchedBackfillTickets
-	}
-
-	log.Info("seeing if we have enough tickets to match")
 	if newTicket != nil {
 		unmatchedTickets = append(unmatchedTickets, *newTicket)
 	}
 	if newBackfillTicket != nil {
 		unmatchedBackfillTickets = append(unmatchedBackfillTickets, *newBackfillTicket)
 	}
-	if len(unmatchedBackfillTickets) > 0 && len(unmatchedTickets) > 0 {
 
+	log.WithField("numBackfill", len(unmatchedBackfillTickets)).
+		WithField("numTicket", len(unmatchedTickets)).
+		Info("buildBackfillMatch")
+
+	if len(unmatchedBackfillTickets) > 0 && len(unmatchedTickets) > 0 {
 		log.Info("I have enough tickets to backfill!")
 		var i int
 		var backfillTicket matchmaker.BackfillTicket

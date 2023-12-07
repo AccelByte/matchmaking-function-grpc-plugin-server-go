@@ -12,9 +12,8 @@ type AllianceRule struct {
 }
 
 type GameRules struct {
-	ShipCountMin         int          `json:"shipCountMin"`
-	ShipCountMax         int          `json:"shipCountMax"`
-	AutoBackfill         bool         `json:"auto_backfill"`
-	SendTicketOnBackfill bool         `json:"send_ticket_on_backfill"`
-	AllianceRule         AllianceRule `json:"alliance"`
+	ShipCountMin int          `json:"shipCountMin"`
+	ShipCountMax int          `json:"shipCountMax"`
+	AutoBackfill bool         `json:"auto_backfill"`
+	AllianceRule AllianceRule `json:"alliance"`
 }
