@@ -5,15 +5,11 @@
 package server
 
 import (
-	"fmt"
-	"testing"
-	"time"
-
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
-	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 type MyConfigRepo struct {
@@ -59,18 +55,16 @@ func TestTokenValidator_ValidateToken(t *testing.T) {
 		return
 	}
 
-	namespace := "accelbyte"
-	resourceName := "MMV2GRPCSERVICE"
-	requiredPermission := validator.Permission{
-		Action:   2,
-		Resource: fmt.Sprintf("NAMESPACE:%s:%s", namespace, resourceName),
+	authService.SetLocalValidation(true)                                          // true will do it locally, false will do it remotely
+	claims, errClaims := authService.ParseAccessTokenToClaims(accessToken, false) // false will not validate using client namespace
+	if errClaims != nil {
+		assert.Fail(t, errClaims.Error())
+
+		return
 	}
 
-	tokenValidator := validator.NewTokenValidator(authService, time.Hour)
-	tokenValidator.Initialize()
-
 	// Act
-	err = tokenValidator.Validate(accessToken, &requiredPermission, &namespace, nil)
+	err = authService.Validate(accessToken, nil, &claims.ExtendNamespace, nil)
 
 	// Assert
 	assert.Nil(t, err)

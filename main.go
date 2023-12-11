@@ -22,7 +22,6 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
-	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
 	promgrpc "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
@@ -132,16 +131,15 @@ func main() {
 	}
 
 	if strings.ToLower(server.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
-		refreshInterval := server.GetEnvInt("REFRESH_INTERVAL", 600)
 		configRepo := sdkAuth.DefaultConfigRepositoryImpl()
 		tokenRepo := sdkAuth.DefaultTokenRepositoryImpl()
-		authService := iam.OAuth20Service{
+		server.OAuth = &iam.OAuth20Service{
 			Client:           factory.NewIamClient(configRepo),
 			ConfigRepository: configRepo,
 			TokenRepository:  tokenRepo,
 		}
-		server.Validator = validator.NewTokenValidator(authService, time.Duration(refreshInterval)*time.Second)
-		server.Validator.Initialize()
+
+		server.OAuth.SetLocalValidation(true)
 
 		unaryServerInterceptors = append(unaryServerInterceptors, server.UnaryAuthServerIntercept)
 		streamServerInterceptors = append(streamServerInterceptors, server.StreamAuthServerIntercept)
@@ -178,9 +176,9 @@ func main() {
 
 	go func() {
 		http.Handle("/metrics", promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}))
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		log.Fatal(http.ListenAndServe(":8081", nil))
 	}()
-	logrus.Printf("prometheus metrics served at :8080/metrics")
+	logrus.Printf("prometheus metrics served at :8081/metrics")
 
 	logrus.Infof("listening to grpc port.")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))

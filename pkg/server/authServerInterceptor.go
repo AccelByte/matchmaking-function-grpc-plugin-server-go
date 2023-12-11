@@ -7,83 +7,71 @@ package server
 import (
 	"context"
 	"fmt"
-	"strings"
-
-	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth/validator"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"strings"
 )
 
-var (
-	Validator validator.AuthTokenValidator
-)
+var OAuth *iam.OAuth20Service
 
 func UnaryAuthServerIntercept(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	if Validator == nil {
+	if OAuth == nil {
 		return nil, errors.New("server token validator not set")
 	}
 
 	meta, found := metadata.FromIncomingContext(ctx)
 	if !found {
-		return nil, errors.New("metadata missing")
+		return nil, errors.New("metadata is missing")
 	}
 
-	authorization := meta["authorization"][0]
-	token := strings.TrimPrefix(authorization, "Bearer ")
+	if meta["authorization"] != nil {
+		authorization := meta["authorization"][0]
+		token := strings.TrimPrefix(authorization, "Bearer ")
 
-	namespace := getNamespace()
-	permission := getRequiredPermission()
-	var userId *string
+		claims, errParse := OAuth.ParseAccessTokenToClaims(token, false)
+		if errParse != nil {
+			return nil, errParse
+		}
 
-	err := Validator.Validate(token, &permission, &namespace, userId)
-	if err != nil {
-		return nil, err
+		err := OAuth.Validate(token, nil, &claims.ExtendNamespace, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println("server: token validated.")
 	}
 
 	return handler(ctx, req)
 }
 
 func StreamAuthServerIntercept(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	if Validator == nil {
+	if OAuth == nil {
 		return errors.New("server token validator not set")
 	}
 
 	meta, found := metadata.FromIncomingContext(ss.Context())
 	if !found {
-		return errors.New("metadata missing")
+		return errors.New("metadata is missing")
 	}
 
-	authorization := meta["authorization"][0]
-	token := strings.TrimPrefix(authorization, "Bearer ")
+	if meta["authorization"] != nil {
+		authorization := meta["authorization"][0]
+		token := strings.TrimPrefix(authorization, "Bearer ")
 
-	namespace := getNamespace()
-	permission := getRequiredPermission()
-	var userId *string
+		claims, errParse := OAuth.ParseAccessTokenToClaims(token, false)
+		if errParse != nil {
+			return errParse
+		}
 
-	err := Validator.Validate(token, &permission, &namespace, userId)
-	if err != nil {
-		return err
+		err := OAuth.Validate(token, nil, &claims.ExtendNamespace, nil)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("server: token validated.")
 	}
 
 	return handler(srv, ss)
-}
-
-func getAction() int {
-	return GetEnvInt("AB_ACTION", 2)
-}
-
-func getNamespace() string {
-	return GetEnv("AB_NAMESPACE", "accelbyte")
-}
-
-func getResourceName() string {
-	return GetEnv("AB_RESOURCE_NAME", "MMV2GRPCSERVICE")
-}
-
-func getRequiredPermission() validator.Permission {
-	return validator.Permission{
-		Action:   getAction(),
-		Resource: fmt.Sprintf("NAMESPACE:%s:%s", getNamespace(), getResourceName()),
-	}
 }
