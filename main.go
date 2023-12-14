@@ -176,9 +176,9 @@ func main() {
 
 	go func() {
 		http.Handle("/metrics", promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}))
-		log.Fatal(http.ListenAndServe(":8081", nil))
+		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
-	logrus.Printf("prometheus metrics served at :8081/metrics")
+	logrus.Printf("prometheus metrics served at :8080/metrics")
 
 	logrus.Infof("listening to grpc port.")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
