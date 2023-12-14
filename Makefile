@@ -4,10 +4,9 @@
 
 SHELL := /bin/bash
 
+BUILDER := grpc-plugin-server-builder
 GOLANG_DOCKER_IMAGE := golang:1.18
 IMAGE_NAME ?= $(shell basename "$$(pwd)")-app
-IMAGE_VERSION ?= latest
-BUILDER := grpc-plugin-server-builder
 
 proto:
 	rm -rfv pkg/pb/*.pb.go
@@ -74,3 +73,8 @@ test_functional_accelbyte_hosted: proto
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $$(pwd):/data \
 		-w /data matchmaking-test-functional bash ./test/functional/test-accelbyte-hosted.sh
+
+ngrok:
+	@test -n "$(NGROK_AUTHTOKEN)" || (echo "NGROK_AUTHTOKEN is not set" ; exit 1)
+	docker run --rm -it --net=host -e NGROK_AUTHTOKEN=$(NGROK_AUTHTOKEN) ngrok/ngrok:3-alpine \
+			tcp 6565	# gRPC server port
