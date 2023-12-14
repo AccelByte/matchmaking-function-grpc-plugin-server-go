@@ -7,11 +7,13 @@ package server
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"strings"
 )
 
 var OAuth *iam.OAuth20Service
@@ -29,18 +31,14 @@ func UnaryAuthServerIntercept(ctx context.Context, req interface{}, info *grpc.U
 	if meta["authorization"] != nil {
 		authorization := meta["authorization"][0]
 		token := strings.TrimPrefix(authorization, "Bearer ")
+		extendNamespace := os.Getenv("AB_NAMESPACE")
 
-		claims, errParse := OAuth.ParseAccessTokenToClaims(token, false)
-		if errParse != nil {
-			return nil, errParse
-		}
-
-		err := OAuth.Validate(token, nil, &claims.ExtendNamespace, nil)
+		err := OAuth.Validate(token, nil, &extendNamespace, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		fmt.Println("server: token validated.")
+		fmt.Print("server: token validated. \n")
 	}
 
 	return handler(ctx, req)
@@ -59,18 +57,14 @@ func StreamAuthServerIntercept(srv interface{}, ss grpc.ServerStream, info *grpc
 	if meta["authorization"] != nil {
 		authorization := meta["authorization"][0]
 		token := strings.TrimPrefix(authorization, "Bearer ")
+		extendNamespace := os.Getenv("AB_NAMESPACE")
 
-		claims, errParse := OAuth.ParseAccessTokenToClaims(token, false)
-		if errParse != nil {
-			return errParse
-		}
-
-		err := OAuth.Validate(token, nil, &claims.ExtendNamespace, nil)
+		err := OAuth.Validate(token, nil, &extendNamespace, nil)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("server: token validated.")
+		fmt.Print("server: token validated. \n")
 	}
 
 	return handler(srv, ss)
