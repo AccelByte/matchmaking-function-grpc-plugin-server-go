@@ -96,6 +96,8 @@ The custom functions in this sample app can be tested locally using [Postman](ht
 
 2. In Postman, create a new gRPC request, then type in `localhost:6565` as the server URL. See Postman's tutorial [here](https://blog.postman.com/postman-now-supports-grpc/).
 
+   > :warning: **If you are running [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) stack alongside this sample app as mentioned in [Test Observability](#test-observability)**: Enter `localhost:10000` instead of `localhost:6565`. This way, the `gRPC server` will be called via `Envoy` service within `grpc-plugin-dependencies` stack instead of directly.
+
 3. Continue by selecting the `MakeMatches` gRPC stream method and click the **Invoke** button. This will start a stream connection to the gRPC server sample app.
 
 4. Proceed by first sending parameters to specify the number of players in a match. Copy the sample `json` below. Then, click **Send**.
@@ -220,7 +222,7 @@ To see how the observability works in this sample app locally, set up the follow
 
    > :exclamation: Read more about [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) [here](https://github.com/AccelByte/grpc-plugin-dependencies/blob/main/README.md).
 
-3. [Test in a local development environment](#test-in-a-local-development-environment).
+3. [Test in a local development environment](#test-in-a-local-development-environment) or [Test with AGS](#test-with-ags).
 
 ## Deploy the sample app
 
