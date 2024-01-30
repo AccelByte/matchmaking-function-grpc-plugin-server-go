@@ -186,13 +186,18 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
     cat api_curl_http_response.out
     exit 1
   fi
-  
+
   echo Player $PLAYER_NUMBER UserId: $USER_ID, MatchTicketId: $MATCH_TICKET_ID
 
   api_curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" \
       -H "Authorization: Bearer $ACCESS_TOKEN"  # For demo only: In reality, player is not supposed to be deleted immediately after creating match ticket
 
   if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
+    exit 1
+  fi
+
+  if ! echo -n "$MATCH_TICKET_ID" | grep -q '[0-9a-f]\+'; then
+    echo "Failed! Not getting the expected MatchTicketId."
     exit 1
   fi
 done
