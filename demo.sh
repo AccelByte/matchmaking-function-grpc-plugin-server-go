@@ -38,6 +38,13 @@ get_code_challenge()
 
 function clean_up()
 {
+  for USER_ID in ${PLAYER_USER_ID_LIST[@]}; do
+    echo Clean up player UserId: $USER_ID ...
+
+    api_curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null   # Ignore delete error
+  done
+
   echo Clean up match pool ...
 
   api_curl -X DELETE "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-pools/${DEMO_PREFIX}_pool" \
@@ -131,6 +138,8 @@ if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
   exit 1
 fi
 
+PLAYER_USER_ID_LIST=()
+
 for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   echo Creating player $PLAYER_NUMBER ${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com ...
 
@@ -143,6 +152,8 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
     cat api_curl_http_response.out
     exit 1
   fi
+
+  PLAYER_USER_ID_LIST+=( $USER_ID )
   
   echo Logging in player $PLAYER_NUMBER ...
   
@@ -188,13 +199,6 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   fi
 
   echo Player $PLAYER_NUMBER UserId: $USER_ID, MatchTicketId: $MATCH_TICKET_ID
-
-  api_curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" \
-      -H "Authorization: Bearer $ACCESS_TOKEN"  # For demo only: In reality, player is not supposed to be deleted immediately after creating match ticket
-
-  if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
-    exit 1
-  fi
 
   if ! echo -n "$MATCH_TICKET_ID" | grep -q '[0-9a-f]\+'; then
     echo "Failed! Not getting the expected MatchTicketId."
