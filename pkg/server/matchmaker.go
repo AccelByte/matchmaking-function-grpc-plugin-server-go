@@ -7,6 +7,8 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 
 	pie_ "github.com/elliotchance/pie/v2"
@@ -57,6 +59,18 @@ func (b MatchMaker) RulesFromJSON(jsonRules string) (interface{}, error) {
 	err := json.Unmarshal([]byte(jsonRules), &ruleSet)
 	if err != nil {
 		return nil, err
+	}
+
+	if ruleSet.AllianceRule.MinNumber > ruleSet.AllianceRule.MaxNumber {
+		return nil, status.Error(codes.InvalidArgument, "alliance rule MaxNumber is less than MinNumber")
+	}
+
+	if ruleSet.AllianceRule.PlayerMinNumber > ruleSet.AllianceRule.PlayerMaxNumber {
+		return nil, status.Error(codes.InvalidArgument, "alliance rule PlayerMaxNumber is less than PlayerMinNumber")
+	}
+
+	if ruleSet.ShipCountMin > ruleSet.ShipCountMax {
+		return nil, status.Error(codes.InvalidArgument, "ShipCountMax is less than ShipCountMin")
 	}
 
 	return ruleSet, nil
