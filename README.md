@@ -106,7 +106,7 @@ The custom functions in this sample app can be tested locally using [Postman](ht
    {
        "parameters": {
            "rules": {
-               "json": "{\"shipCountMin\":2, \"shipCountMax\":2}"
+               "json": "{\"shipCountMin\":1, \"shipCountMax\":2}"
            }
        }
    }

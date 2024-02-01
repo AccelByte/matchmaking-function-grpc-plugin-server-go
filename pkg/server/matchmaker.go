@@ -89,6 +89,7 @@ func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interf
 				}
 				logrus.Infof("MATCHMAKER: got a ticket: %s", ticket.TicketID)
 				unmatchedTickets = buildMatch(ticket, unmatchedTickets, rule, results)
+
 			case <-ctx.Done():
 				logrus.Info("MATCHMAKER: CTX Done triggered")
 
@@ -111,6 +112,18 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 	if minPlayers == 0 && maxPlayers == 0 {
 		minPlayers = 2
 		maxPlayers = 2
+	}
+
+	if rule.ShipCountMin == 0 {
+		minPlayers *= 1
+	} else {
+		minPlayers *= rule.ShipCountMin
+	}
+
+	if rule.ShipCountMax == 0 {
+		maxPlayers *= 1
+	} else {
+		maxPlayers *= rule.ShipCountMax
 	}
 
 	for {
