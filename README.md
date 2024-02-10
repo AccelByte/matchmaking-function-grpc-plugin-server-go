@@ -55,14 +55,16 @@ This sample app also shows the instrumentation setup necessary for observability
 2. Fill in the required environment variables in the `.env` file as follows.
 
    ```
-   AB_BASE_URL=https://demo.accelbyte.io     # Base URL of AGS environment
+   AB_BASE_URL=https://test.accelbyte.io     # Base URL of AGS environment
    AB_CLIENT_ID='xxxxxxxxxx'                 # Client ID from the Prerequisites section
    AB_CLIENT_SECRET='xxxxxxxxxx'             # Client Secret from the Prerequisites section
    AB_NAMESPACE='xxxxxxxxxx'                 # Namespace ID from the Prerequisites section
-   PLUGIN_GRPC_SERVER_AUTH_ENABLED=false     # Enable or disable access token and permission verification
+   PLUGIN_GRPC_SERVER_AUTH_ENABLED=true     # Enable or disable access token validation
    ```
 
-   > :warning: **Keep PLUGIN_GRPC_SERVER_AUTH_ENABLED=false for now**. It is not currently supported by AGS, but it will be enabled later on to improve security. If it is enabled, the gRPC server will reject any calls from gRPC clients without proper authorization metadata.
+   > :info: **In this sample app, PLUGIN_GRPC_SERVER_AUTH_ENABLED is `true` by default**: If it is set to `false`, the 
+   `gRPC server` can be invoked without `AccelByte Gaming Services` access token. This option is provided for development 
+   purpose only. It is recommended to enable `gRPC server` access token validation in production environment.
 
 ## Build the sample app
 
@@ -85,6 +87,9 @@ docker compose up --build
 You can test the sample app in a local development environment and with AGS.
 
 ### Test in a local development environment
+
+> :warning: **To perform the following, make sure PLUGIN_GRPC_SERVER_AUTH_ENABLED is set to `false`**: Otherwise,
+the gRPC request will be rejected by the `gRPC server`.
 
 The custom functions in this sample app can be tested locally using [Postman](https://www.postman.com/).
 
@@ -183,7 +188,7 @@ To test the sample app, which runs locally with AGS, the `gRPC server` needs to 
 5. Run the [demo.sh](demo.sh) script to simulate the matchmaking flow which calls this sample app `gRPC server` using the `Client ID` and `Client Secret` created in the previous step. Pay attention to the sample `gRPC server` console log when the matchmaking flow is running. `gRPC Server` methods should get called when creating match tickets and it should group players in twos.
 
    ```
-   export AB_BASE_URL='https://demo.accelbyte.io'
+   export AB_BASE_URL='https://test.accelbyte.io'
    export AB_CLIENT_ID='xxxxxxxxxx'         # Use the Client ID from the previous step
    export AB_CLIENT_SECRET='xxxxxxxxxx'     # Use the Client Secret from the previous step    
    export AB_NAMESPACE='accelbyte'          # Use your Namespace ID
