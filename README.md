@@ -27,11 +27,11 @@ This sample app also shows the instrumentation setup necessary for observability
 
    b. make
 
-   c. Docker v23.x
+   c. [docker v23.x](https://docs.docker.com/engine/install/ubuntu/)
 
-   d. Go 1.18
+   d. go 1.18
 
-   e. Git
+   e. git
 
    f. [Postman](https://www.postman.com/)
 
@@ -234,15 +234,16 @@ To see how the observability works in this sample app locally, set up the follow
 
 After testing, you can deploy the sample app to AGS. Follow these steps:
 
-1. [Create a new Extend Override App in the AGS Admin Portal](https://docs.accelbyte.io/gaming-services/services/extend/override-ags-feature/getting-started-with-matchmaking-customization/#create-an-extend-app). Keep the repository URL.
-2. Download and set up [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/) (only if this has not been set up previously).
-3. Perform docker login using `extend-helper-cli` using the following command:
+1. [Create a new Extend Override App on Admin Portal](https://docs.accelbyte.io/gaming-services/services/extend/override-ags-feature/getting-started-with-matchmaking-customization/#create-an-extend-app). Keep the `Repository URI`.
+2. Download and setup [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/) (only if it has not been done previously).
+3. Perform docker login with `extend-helper-cli` using the following command.
    ```
-   extend-helper-cli dockerlogin --namespace my-game --app my-app --login
+   extend-helper-cli dockerlogin --namespace <my-game> --app <my-app> --login
    ```
-   > :exclamation: Read more about [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/) [here](https://github.com/AccelByte/extend-helper-cli/blob/master/README.md).
-4. Build and push the sample app docker image to AccelByte ECR using the following command:
+   > :exclamation: For your convenience, the above `extend-helper-cli` command can also be 
+   copied from `Repository Authentication Command` under the corresponding app detail page.
+4. Build and push sample app docker image to AccelByte ECR using the following command.
    ```
-   make imagex_push REPO_URL=xxxxxxxxxx.dkr.ecr.us-west-2.amazonaws.com/accelbyte/justice/development/extend/xxxxxxxxxx/xxxxxxxxxx IMAGE_TAG=v0.0.1
+   make imagex_push IMAGE_TAG=v0.0.1 REPO_URL=xxxxxxxxxx.dkr.ecr.us-west-2.amazonaws.com/accelbyte/justice/development/extend/xxxxxxxxxx/xxxxxxxxxx
    ```
-   > :exclamation: **The REPO_URL is obtained from step 1**: It can be found under `Repository Url` in the app details.
+   > :exclamation: **The REPO_URL is obtained from step 1**: It can be found under 'Repository URI' in the app detail.
