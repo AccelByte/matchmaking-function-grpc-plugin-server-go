@@ -146,7 +146,7 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   USER_ID="$(api_curl "${AB_BASE_URL}/iam/v4/public/namespaces/$AB_NAMESPACE/users" \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H 'Content-Type: application/json' \
-      -d "{\"authType\":\"EMAILPASSWD\",\"country\":\"ID\",\"dateOfBirth\":\"1995-01-10\",\"displayName\":\"MMv2 gRPC Player\",\"emailAddress\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com\",\"password\":\"GFPPlmdb2-\",\"username\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER\"}" | jq --raw-output .userId)"
+      -d "{\"authType\":\"EMAILPASSWD\",\"country\":\"ID\",\"dateOfBirth\":\"1995-01-10\",\"displayName\":\"MMv2 gRPC Player\",\"uniqueDisplayName\":\"MMv2 gRPC Player$PLAYER_NUMBER\",\"emailAddress\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com\",\"password\":\"GFPPlmdb2-\",\"username\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER\"}" | jq --raw-output .userId)"
   
   if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
     cat api_curl_http_response.out
