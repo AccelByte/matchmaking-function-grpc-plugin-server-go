@@ -39,7 +39,7 @@ This sample app also shows the instrumentation setup necessary for observability
 
    a. Base URL:
    
-      - For `Starter` tier e.g.  https://spaceshooter.dev.gamingservices.accelbyte.io
+      - For `Starter` tier e.g.  https://spaceshooter.gamingservices.accelbyte.io
       - For `Premium` tier e.g.  https://dev.accelbyte.io
       
    b. A game namespace. If you don't have one yet, [create a game namespace](https://docs.accelbyte.io/gaming-services/tutorials/how-to/create-a-game-namespace/). Keep the `Namespace ID`.
@@ -174,7 +174,6 @@ To test the sample app, which runs locally with AGS, the `gRPC server` needs to 
    > :warning: **If you are running [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) stack alongside this sample app as mentioned in the [Test observability](#test-observability) section**: Run the above command in `grpc-plugin-dependencies` directory instead of this sample app directory. This way, the `gRPC server` will be called via `Envoy` service within the `grpc-plugin-dependencies` stack instead of directly.
 
 4. [Create an OAuth Client](https://docs.accelbyte.io/guides/access/iam-client.html) with `confidential` client type. Keep the `Client ID` and `Client Secret`.
-   > :exclamation: For AGS Starter customers, you don't need to add the permissions. All confidential IAM clients already contain the necessary permissions.
 
    - NAMESPACE:{namespace}:MATCHMAKING:RULES [CREATE, READ, UPDATE, DELETE]
    - NAMESPACE:{namespace}:MATCHMAKING:FUNCTIONS [CREATE, READ, UPDATE, DELETE]
