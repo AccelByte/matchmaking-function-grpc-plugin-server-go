@@ -29,7 +29,7 @@ This sample app also shows the instrumentation setup necessary for observability
 
    c. [docker v23.x](https://docs.docker.com/engine/install/ubuntu/)
 
-   d. go 1.18
+   d. go 1.19
 
    e. git
 
