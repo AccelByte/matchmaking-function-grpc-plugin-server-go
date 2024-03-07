@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"sync"
 	"testing"
 	"time"
@@ -60,7 +61,7 @@ func TestValidateTicket(t *testing.T) {
 	dRules, _ := json.Marshal(rule)
 	rules := &matchfunctiongrpc.Rules{Json: string(dRules)}
 	ticket := matchmaker.Ticket{
-		TicketID:  GenerateUUID(),
+		TicketID:  common.GenerateUUID(),
 		MatchPool: "",
 	}
 	a := &matchfunctiongrpc.ValidateTicketRequest{
@@ -108,7 +109,7 @@ func TestMatch(t *testing.T) {
 			players = append(players, p)
 
 			ticket := matchmaker.Ticket{
-				TicketID:         GenerateUUID(),
+				TicketID:         common.GenerateUUID(),
 				MatchPool:        "",
 				CreatedAt:        time.Now(),
 				Players:          players,
