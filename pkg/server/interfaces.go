@@ -4,7 +4,10 @@
 
 package server
 
-import "matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+import (
+	"matchmaking-function-grpc-plugin-server-go/pkg/common"
+	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+)
 
 type MatchMaker struct {
 	unmatchedTickets []matchmaker.Ticket
@@ -25,12 +28,12 @@ ValidateTicket should return false AND api.ErrInvalidRequest when a ticket is no
 */
 type MatchLogic interface {
 	// "TODO: add in scope"
-	BackfillMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.BackfillProposal
-	MakeMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match
-	RulesFromJSON(json string) (interface{}, error)
-	GetStatCodes(matchRules interface{}) []string
-	ValidateTicket(matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error)
-	EnrichTicket(matchTicket matchmaker.Ticket, ruleSet interface{}) (ticket matchmaker.Ticket, err error)
+	BackfillMatches(scope *common.Scope, ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.BackfillProposal
+	MakeMatches(scope *common.Scope, ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match
+	RulesFromJSON(scope *common.Scope, json string) (interface{}, error)
+	GetStatCodes(scope *common.Scope, matchRules interface{}) []string
+	ValidateTicket(scope *common.Scope, matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error)
+	EnrichTicket(scope *common.Scope, matchTicket matchmaker.Ticket, ruleSet interface{}) (ticket matchmaker.Ticket, err error)
 }
 
 // TicketProvider provides a mechanism for a match function to get tickets from the match pool it's trying to make matches for

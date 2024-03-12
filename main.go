@@ -23,20 +23,21 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/propagation"
+	"github.com/sirupsen/logrus"
+
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 	"matchmaking-function-grpc-plugin-server-go/pkg/server"
-
-	"google.golang.org/grpc"
 )
 
 const (
@@ -50,6 +51,8 @@ var (
 )
 
 func main() {
+	configureLogging()
+
 	go func() {
 		runtime.SetBlockProfileRate(1)
 		runtime.SetMutexProfileFraction(10)
@@ -175,4 +178,15 @@ func main() {
 	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	<-ctx.Done()
 	scope.Log.Println("Goodbye...")
+}
+
+func configureLogging() logrus.Level {
+	logLevel, err := logrus.ParseLevel(common.GetEnv("LOG_LEVEL", logrus.InfoLevel.String()))
+	if err != nil {
+		logrus.Error("unable to parse log level: ", err)
+	}
+	logrus.SetLevel(logLevel)
+	logrus.SetReportCaller(true)
+
+	return logLevel
 }

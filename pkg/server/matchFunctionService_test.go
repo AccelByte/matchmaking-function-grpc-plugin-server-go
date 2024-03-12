@@ -8,18 +8,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"sync"
 	"testing"
 	"time"
 
+	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
+	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	"github.com/sirupsen/logrus"
-
-	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
-
 	"github.com/stretchr/testify/assert"
 
 	"google.golang.org/grpc"
@@ -29,6 +27,9 @@ func TestGetStatCodes(t *testing.T) {
 	// prepare
 	s := grpc.NewServer()
 
+	scope := common.NewRootScope(context.Background(), "test", common.GenerateUUID())
+	defer scope.Finish()
+
 	// act
 	matchMaker := New()
 	server := MatchFunctionServer{
@@ -37,7 +38,7 @@ func TestGetStatCodes(t *testing.T) {
 	}
 
 	codes := []string{"2", "2"}
-	ok := server.MM.GetStatCodes(codes)
+	ok := server.MM.GetStatCodes(scope, codes)
 
 	// assert
 	assert.NotNil(t, s)
@@ -79,6 +80,9 @@ func TestValidateTicket(t *testing.T) {
 
 func TestMatch(t *testing.T) {
 	// prepare
+	scope := common.NewRootScope(context.Background(), "test", common.GenerateUUID())
+	defer scope.Finish()
+
 	s := grpc.NewServer()
 	server := New()
 	madeMatches := 0
@@ -90,7 +94,7 @@ func TestMatch(t *testing.T) {
 		ShipCountMax: 1,
 	}
 
-	matches := server.MakeMatches(ticketProvider, r)
+	matches := server.MakeMatches(scope, ticketProvider, r)
 	var wg sync.WaitGroup
 	var players []playerdata.PlayerData
 

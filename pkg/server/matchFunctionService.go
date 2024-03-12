@@ -12,8 +12,9 @@ import (
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
-
 	matchfunctiongrpc "matchmaking-function-grpc-plugin-server-go/pkg/pb"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MatchFunctionServer is for the handler (upper level of match logic)
@@ -51,92 +52,76 @@ func (m matchTicketProvider) GetBackfillTickets() chan matchmaker.BackfillTicket
 
 // GetStatCodes uses the assigned MatchMaker to get the stat codes of the ruleset
 func (m *MatchFunctionServer) GetStatCodes(ctx context.Context, req *matchfunctiongrpc.GetStatCodesRequest) (*matchfunctiongrpc.StatCodesResponse, error) {
-	scope := common.GetScopeFromContext(ctx, "MatchFunctionService.GetStatCodes")
+	scope := common.ChildScopeFromRemoteScope(ctx, "MatchFunctionServer.GetStatCodes")
 	defer scope.Finish()
 
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
-
-	rules, err := m.MM.RulesFromJSON(req.Rules.Json)
+	rules, err := m.MM.RulesFromJSON(scope, req.Rules.Json)
 	if err != nil {
-		log.Errorf("could not get rules from json: %s", err)
+		scope.Log.Errorf("could not get rules from json: %s", err)
 
 		return nil, err
 	}
 
-	codes := m.MM.GetStatCodes(rules)
+	codes := m.MM.GetStatCodes(scope, rules)
 
 	return &matchfunctiongrpc.StatCodesResponse{Codes: codes}, nil
 }
 
 // ValidateTicket uses the assigned MatchMaker to validate the ticket
 func (m *MatchFunctionServer) ValidateTicket(ctx context.Context, req *matchfunctiongrpc.ValidateTicketRequest) (*matchfunctiongrpc.ValidateTicketResponse, error) {
-	scope := common.GetScopeFromContext(ctx, "MatchFunctionService.ValidateTicket")
+	scope := common.ChildScopeFromRemoteScope(ctx, "MatchFunctionServer.ValidateTicket")
 	defer scope.Finish()
 
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
+	scope.Log.Info("GRPC SERVICE: validate ticket")
 
-	log.Info("GRPC SERVICE: validate ticket")
-
-	rules, err := m.MM.RulesFromJSON(req.Rules.Json)
+	rules, err := m.MM.RulesFromJSON(scope, req.Rules.Json)
 	if err != nil {
-		log.Errorf("could not get rules from json: %s", err)
+		scope.Log.Errorf("could not get rules from json: %s", err)
 	}
 
 	matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(req.Ticket)
 
-	validTicket, err := m.MM.ValidateTicket(matchTicket, rules)
+	validTicket, err := m.MM.ValidateTicket(scope, matchTicket, rules)
 
 	return &matchfunctiongrpc.ValidateTicketResponse{ValidTicket: validTicket}, err
 }
 
 // EnrichTicket uses the assigned MatchMaker to enrich the ticket
 func (m *MatchFunctionServer) EnrichTicket(ctx context.Context, req *matchfunctiongrpc.EnrichTicketRequest) (*matchfunctiongrpc.EnrichTicketResponse, error) {
-	scope := common.GetScopeFromContext(ctx, "MatchFunctionService.EnrichTicket")
+	scope := common.ChildScopeFromRemoteScope(ctx, "MatchFunctionServer.EnrichTicket")
 	defer scope.Finish()
 
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
-
-	log.Infof("GRPC SERVICE: enrich ticket: %s \n", common.LogJSONFormatter(req.Ticket))
+	scope.Log.Infof("GRPC SERVICE: enrich ticket: %s \n", common.LogJSONFormatter(req.Ticket))
 	matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(req.Ticket)
-	enrichedTicket, err := m.MM.EnrichTicket(matchTicket, req.Rules)
+	enrichedTicket, err := m.MM.EnrichTicket(scope, matchTicket, req.Rules)
 	if err != nil {
 		return nil, err
 	}
 	newTicket := matchfunctiongrpc.MatchfunctionTicketToProtoTicket(enrichedTicket)
 
 	response := &matchfunctiongrpc.EnrichTicketResponse{Ticket: newTicket}
-	log.Infof("Response enrich ticket: %s \n", common.LogJSONFormatter(response))
+	scope.Log.Infof("Response enrich ticket: %s \n", common.LogJSONFormatter(response))
 
 	return response, nil
 }
 
 // MakeMatches uses the assigned MatchMaker to build matches and sends them back to the client
 func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction_MakeMatchesServer) error {
-	scope := common.GetScopeFromContext(context.Background(), "MatchFunctionService.MakeMatches")
+	scope := common.ChildScopeFromRemoteScope(context.Background(), "MatchFunctionServer.MakeMatches")
 	defer scope.Finish()
-
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
 
 	matchesMade := 0
 
 	in, err := server.Recv()
 	if err != nil {
-		log.Errorf("error during stream Recv. %s", err.Error())
+		scope.Log.Errorf("error during stream Recv. %s", err.Error())
 
 		return err
 	}
 
 	mrpT, ok := in.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Parameters)
 	if !ok {
-		log.Error("not a MakeMatchesRequest_Parameters type")
+		scope.Log.Error("not a MakeMatchesRequest_Parameters type")
 
 		return errors.New("expected parameters in the first message were not met")
 	}
@@ -144,17 +129,17 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	// scope := envelope.NewRootScope(context.Background(), "GRPC.MakeMatches", mrpT.Parameters.Scope.AbTraceId)
 	//defer scope.Finish()
 
-	rules, err := m.MM.RulesFromJSON(mrpT.Parameters.Rules.Json)
+	rules, err := m.MM.RulesFromJSON(scope, mrpT.Parameters.Rules.Json)
 	if err != nil {
-		log.WithError(err).Error("could not get rules from json")
+		scope.Log.WithError(err).Error("could not get rules from json")
 
 		return err
 	}
 
-	log.WithField("rules", common.LogJSONFormatter(rules)).Infof("Retrieved rules")
+	scope.Log.WithField("rules", common.LogJSONFormatter(rules)).Infof("Retrieved rules")
 
 	ticketProvider := newMatchTicketProvider()
-	resultChan := m.MM.MakeMatches(ticketProvider, rules)
+	resultChan := m.MM.MakeMatches(scope, ticketProvider, rules)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
@@ -168,25 +153,25 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 		for {
 			req, err := server.Recv()
 			if err == io.EOF {
-				log.Debug("Recv ended")
+				scope.Log.Debug("Recv ended")
 
 				return
 			}
 			if err != nil {
-				log.WithError(err).Debug("Recv error")
+				scope.Log.WithError(err).Debug("Recv error")
 
 				return
 			}
 			t, ok := req.GetRequestType().(*matchfunctiongrpc.MakeMatchesRequest_Ticket)
 			if !ok {
-				log.Errorf("not a MakeMatchesRequest_Ticket: %s", t.Ticket)
+				scope.Log.Errorf("not a MakeMatchesRequest_Ticket: %s", t.Ticket)
 
 				return
 			}
 
-			log.Info("crafting a matchfunctions.Ticket")
+			scope.Log.Info("crafting a matchfunctions.Ticket")
 			matchTicket := matchfunctiongrpc.ProtoTicketToMatchfunctionTicket(t.Ticket)
-			log.Infof("writing match ticket: %s", common.LogJSONFormatter(matchTicket))
+			scope.Log.Infof("writing match ticket: %s", common.LogJSONFormatter(matchTicket))
 			ticketProvider.channelTickets <- matchTicket
 		}
 	}()
@@ -195,12 +180,12 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	go func() {
 		defer wg.Done()
 		for result := range resultChan {
-			log.Info("crafting a MatchResponse")
+			scope.Log.Info("crafting a MatchResponse")
 			resp := matchfunctiongrpc.MatchResponse{Match: matchfunctiongrpc.MatchfunctionMatchToProtoMatch(result)}
-			log.Infof("Response: %s", common.LogJSONFormatter(resp))
-			log.Infof("match made and being sent back to the client: %+v", &resp)
+			scope.Log.Infof("Response: %s", common.LogJSONFormatter(resp))
+			scope.Log.Infof("match made and being sent back to the client: %+v", &resp)
 			if err := server.Send(&resp); err != nil {
-				log.WithError(err).Errorf("error on server send")
+				scope.Log.WithError(err).Errorf("error on server send")
 
 				return
 			}
@@ -209,57 +194,53 @@ func (m *MatchFunctionServer) MakeMatches(server matchfunctiongrpc.MatchFunction
 	}()
 	wg.Wait()
 
-	log.Infof("make matches finished and %d matches were made", matchesMade)
+	scope.Log.Infof("make matches finished and %d matches were made", matchesMade)
 
 	return nil
 }
 
 // BackfillMatches uses the assigned MatchMaker to run backfill
 func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunction_BackfillMatchesServer) error {
-	scope := common.GetScopeFromContext(context.Background(), "MatchFunctionService.BackfillMatches")
-	defer scope.Finish() // TODO done?
+	scope := common.ChildScopeFromRemoteScope(context.Background(), "MatchFunctionServer.BackfillMatches")
+	defer scope.Finish()
 
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
-
-	log.Info("backfill matches")
+	scope.Log.Info("backfill matches")
 
 	in, err := server.Recv()
 	if err == io.EOF {
-		log.Debug("Recv ended")
+		scope.Log.Debug("Recv ended")
 		return nil
 	}
 	if err != nil {
-		log.WithError(err).Error("Recv error")
+		scope.Log.WithError(err).Error("Recv error")
 		return err
 	}
 
 	mrpT, ok := in.GetRequestType().(*matchfunctiongrpc.BackfillMakeMatchesRequest_Parameters)
 	if !ok {
-		log.Error("not a BackfillMakeMatchesRequest_Parameters type")
+		scope.Log.Error("not a BackfillMakeMatchesRequest_Parameters type")
 
 		return errors.New("expected parameters in the first message were not met")
 	}
 
-	rules, err := m.MM.RulesFromJSON(mrpT.Parameters.Rules.Json)
+	rules, err := m.MM.RulesFromJSON(scope, mrpT.Parameters.Rules.Json)
 	if err != nil {
-		log.WithError(err).Errorf("could not get rules from json")
+		scope.Log.WithError(err).Errorf("could not get rules from json")
 
 		return err
 	}
 
-	log.WithField("rules", common.LogJSONFormatter(rules)).Infof("Retrieved rules")
+	scope.Log.WithField("rules", common.LogJSONFormatter(rules)).Infof("Retrieved rules")
 
 	ticketProvider := newMatchTicketProvider()
 
-	go m.fetchBackfillTickets(ticketProvider, server)
+	go m.fetchBackfillTickets(scope.Ctx, ticketProvider, server)
 
-	backfillProposal := m.MM.BackfillMatches(ticketProvider, rules)
+	backfillProposal := m.MM.BackfillMatches(scope, ticketProvider, rules)
 	for {
 		proposal, ok := <-backfillProposal
 		if !ok {
-			log.Info("no more proposal")
+			scope.Log.Info("no more proposal")
 			return nil
 		}
 
@@ -267,23 +248,18 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 			BackfillProposal: matchfunctiongrpc.MatchfunctionBackfillProposalToProtoBackfillProposal(proposal),
 		}
 
-		log.WithField("proposal", common.LogJSONFormatter(proposal)).Info("send proposal")
+		scope.Log.WithField("proposal", common.LogJSONFormatter(proposal)).Info("send proposal")
 
 		err = server.Send(&resp)
 		if err != nil {
-			log.WithError(err).Error("send proposal error")
+			scope.Log.WithError(err).Error("send proposal error")
 			return err
 		}
 	}
 }
 
-func (m *MatchFunctionServer) fetchBackfillTickets(ticketProvider matchTicketProvider, server matchfunctiongrpc.MatchFunction_BackfillMatchesServer) {
-	scope := common.GetScopeFromContext(context.Background(), "MatchFunctionService.fetchBackfillTickets")
-	defer scope.Finish()
-
-	log := scope.AddBaggagesAndLogField(map[string]interface{}{
-		"method": "GRPC_SERVICE",
-	})
+func (m *MatchFunctionServer) fetchBackfillTickets(ctx context.Context, ticketProvider matchTicketProvider, server matchfunctiongrpc.MatchFunction_BackfillMatchesServer) {
+	log := logrus.WithContext(ctx)
 
 	defer func() {
 		close(ticketProvider.channelTickets)

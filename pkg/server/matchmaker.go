@@ -5,14 +5,15 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
 	"time"
 
 	pie_ "github.com/elliotchance/pie/v2"
-	"github.com/sirupsen/logrus"
+	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	matchfunction "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
@@ -24,37 +25,37 @@ func New() MatchLogic {
 }
 
 // ValidateTicket returns a bool if the match ticket is valid
-func (b MatchMaker) ValidateTicket(matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error) {
-	logrus.Info("MATCHMAKER: validate ticket")
-	logrus.Info("Ticket Validation successful")
+func (b MatchMaker) ValidateTicket(scope *common.Scope, matchTicket matchmaker.Ticket, matchRules interface{}) (bool, error) {
+	scope.Log.Info("MATCHMAKER: validate ticket")
+	scope.Log.Info("Ticket Validation successful")
 
 	return true, nil
 }
 
 // EnrichTicket is responsible for adding logic to the match ticket before match making
-func (b MatchMaker) EnrichTicket(matchTicket matchmaker.Ticket, ruleSet interface{}) (ticket matchmaker.Ticket, err error) {
-	logrus.Info("MATCHMAKER: enrich ticket")
+func (b MatchMaker) EnrichTicket(scope *common.Scope, matchTicket matchmaker.Ticket, ruleSet interface{}) (ticket matchmaker.Ticket, err error) {
+	scope.Log.Info("MATCHMAKER: enrich ticket")
 	if len(matchTicket.TicketAttributes) == 0 {
-		logrus.Info("MATCHMAKER: ticket attributes are empty, lets add some!")
+		scope.Log.Info("MATCHMAKER: ticket attributes are empty, lets add some!")
 		enrichMap := map[string]interface{}{
 			"enrichedNumber": float64(20),
 		}
 		matchTicket.TicketAttributes = enrichMap
-		logrus.Infof("EnrichedTicket Attributes: %+v", matchTicket.TicketAttributes)
+		scope.Log.Infof("EnrichedTicket Attributes: %+v", matchTicket.TicketAttributes)
 	}
 
 	return matchTicket, nil
 }
 
 // GetStatCodes returns the string slice of the stat codes in matchrules
-func (b MatchMaker) GetStatCodes(matchRules interface{}) []string {
-	logrus.Infof("MATCHMAKER: stat codes: %s", []string{})
+func (b MatchMaker) GetStatCodes(scope *common.Scope, matchRules interface{}) []string {
+	scope.Log.Infof("MATCHMAKER: stat codes: %s", []string{})
 
 	return []string{}
 }
 
 // RulesFromJSON returns the ruleset from the Game rules
-func (b MatchMaker) RulesFromJSON(jsonRules string) (interface{}, error) {
+func (b MatchMaker) RulesFromJSON(scope *common.Scope, jsonRules string) (interface{}, error) {
 	var ruleSet GameRules
 	err := json.Unmarshal([]byte(jsonRules), &ruleSet)
 	if err != nil {
@@ -77,11 +78,11 @@ func (b MatchMaker) RulesFromJSON(jsonRules string) (interface{}, error) {
 }
 
 // MakeMatches iterates over all the match tickets and matches them based on the buildMatch function
-func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match {
-	logrus.Info("MATCHMAKER: make matches")
-	log := logrus.WithField("method", "MATCHMAKER.MakeMatches")
+func (b MatchMaker) MakeMatches(scope *common.Scope, ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match {
+	scope.Log.Info("MATCHMAKER: make matches")
+	log := scope.Log.WithField("method", "MATCHMAKER.MakeMatches")
 	results := make(chan matchmaker.Match)
-	ctx := context.Background()
+	ctx := scope.Ctx
 
 	rule, ok := matchRules.(GameRules)
 	if !ok {
@@ -97,15 +98,15 @@ func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interf
 			select {
 			case ticket, ok := <-nextTicket:
 				if !ok {
-					logrus.Info("MATCHMAKER: there are no tickets to create a match with")
+					scope.Log.Info("MATCHMAKER: there are no tickets to create a match with")
 
 					return
 				}
-				logrus.Infof("MATCHMAKER: got a ticket: %s", ticket.TicketID)
-				unmatchedTickets = buildMatch(ticket, unmatchedTickets, rule, results)
+				scope.Log.Infof("MATCHMAKER: got a ticket: %s", ticket.TicketID)
+				unmatchedTickets = buildMatch(scope, ticket, unmatchedTickets, rule, results)
 
 			case <-ctx.Done():
-				logrus.Info("MATCHMAKER: CTX Done triggered")
+				scope.Log.Info("MATCHMAKER: CTX Done triggered")
 
 				return
 			}
@@ -116,8 +117,8 @@ func (b MatchMaker) MakeMatches(ticketProvider TicketProvider, matchRules interf
 }
 
 // buildMatch is responsible for building matches from the slice of match tickets and feeding them to the match channel
-func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, rule GameRules, results chan matchmaker.Match) []matchmaker.Ticket {
-	logrus.Info("MATCHMAKER: seeing if we have enough tickets to match")
+func buildMatch(scope *common.Scope, ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, rule GameRules, results chan matchmaker.Match) []matchmaker.Ticket {
+	scope.Log.Info("MATCHMAKER: seeing if we have enough tickets to match")
 	unmatchedTickets = append(unmatchedTickets, ticket)
 
 	minPlayers := rule.AllianceRule.MinNumber * rule.AllianceRule.PlayerMinNumber
@@ -150,7 +151,7 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 			numPlayers = maxPlayers
 		}
 
-		logrus.Info("MATCHMAKER: I have enough tickets to match!")
+		scope.Log.Info("MATCHMAKER: I have enough tickets to match!")
 
 		backfill := false
 		if rule.AutoBackfill && numPlayers < maxPlayers {
@@ -172,34 +173,34 @@ func buildMatch(ticket matchmaker.Ticket, unmatchedTickets []matchmaker.Ticket, 
 			Backfill: backfill,
 		}
 		copy(match.Tickets, unmatchedTickets)
-		logrus.Info("MATCHMAKER: sending to results channel")
+		scope.Log.Info("MATCHMAKER: sending to results channel")
 		results <- match
-		logrus.Infof("MATCHMAKER: reducing unmatched tickets %d to %d", len(unmatchedTickets), len(unmatchedTickets)-numPlayers)
+		scope.Log.Infof("MATCHMAKER: reducing unmatched tickets %d to %d", len(unmatchedTickets), len(unmatchedTickets)-numPlayers)
 		unmatchedTickets = unmatchedTickets[numPlayers:]
 	}
 
-	logrus.Info("MATCHMAKER: not enough tickets to build a match")
+	scope.Log.Info("MATCHMAKER: not enough tickets to build a match")
 
 	return unmatchedTickets
 }
 
-func (b MatchMaker) BackfillMatches(ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.BackfillProposal {
+func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.BackfillProposal {
 	results := make(chan matchmaker.BackfillProposal)
-	ctx := context.Background()
+	ctx := scope.Ctx
 
-	log := logrus.WithField("method", "MatchMaker.BackfillMatches")
-	log.Info("start")
+	scope.Log.WithField("method", "MatchMaker.BackfillMatches")
+	scope.Log.Info("start")
 
 	rule, ok := matchRules.(GameRules)
 	if !ok {
-		log.Errorf("unexpected game rule type %T", matchRules)
+		scope.Log.Errorf("unexpected game rule type %T", matchRules)
 		return nil
 	}
 
 	go func() {
 		defer func() {
 			close(results)
-			log.Info("end backfill")
+			scope.Log.Info("end backfill")
 		}()
 		var unmatchedTickets []matchmaker.Ticket
 		var unmatchedBackfillTickets []matchmaker.BackfillTicket
@@ -214,22 +215,22 @@ func (b MatchMaker) BackfillMatches(ticketProvider TicketProvider, matchRules in
 			select {
 			case ticket, ok := <-nextTicket:
 				if !ok {
-					log.Info("no more match tickets")
+					scope.Log.Info("no more match tickets")
 					nextTicket = nil
 					continue
 				}
-				log.WithField("ticketId", ticket.TicketID).Infof("got a match ticket")
-				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(&ticket, nil, unmatchedTickets, unmatchedBackfillTickets, rule, results)
+				scope.Log.WithField("ticketId", ticket.TicketID).Infof("got a match ticket")
+				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(scope, &ticket, nil, unmatchedTickets, unmatchedBackfillTickets, rule, results)
 			case backfillTicket, ok := <-nextBackfillTicket:
 				if !ok {
-					log.Info("no more backfill tickets")
+					scope.Log.Info("no more backfill tickets")
 					nextBackfillTicket = nil
 					continue
 				}
-				log.WithField("ticketId", backfillTicket.TicketID).Infof("got a backfill ticket")
-				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(nil, &backfillTicket, unmatchedTickets, unmatchedBackfillTickets, rule, results)
+				scope.Log.WithField("ticketId", backfillTicket.TicketID).Infof("got a backfill ticket")
+				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(scope, nil, &backfillTicket, unmatchedTickets, unmatchedBackfillTickets, rule, results)
 			case <-ctx.Done():
-				log.Info("CTX Done triggered")
+				scope.Log.Info("CTX Done triggered")
 
 				return
 			}
@@ -240,8 +241,8 @@ func (b MatchMaker) BackfillMatches(ticketProvider TicketProvider, matchRules in
 }
 
 // buildBackfillMatch is responsible for building matches from the slice of match tickets and feeding them to the match channel
-func buildBackfillMatch(newTicket *matchmaker.Ticket, newBackfillTicket *matchmaker.BackfillTicket, unmatchedTickets []matchmaker.Ticket, unmatchedBackfillTickets []matchmaker.BackfillTicket, rule GameRules, results chan matchmaker.BackfillProposal) ([]matchmaker.Ticket, []matchmaker.BackfillTicket) {
-	log := logrus.WithField("method", "MATCHMAKER.buildBackfillMatch")
+func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBackfillTicket *matchmaker.BackfillTicket, unmatchedTickets []matchmaker.Ticket, unmatchedBackfillTickets []matchmaker.BackfillTicket, rule GameRules, results chan matchmaker.BackfillProposal) ([]matchmaker.Ticket, []matchmaker.BackfillTicket) {
+	log := scope.Log.WithField("method", "MATCHMAKER.buildBackfillMatch")
 
 	if newTicket != nil {
 		unmatchedTickets = append(unmatchedTickets, *newTicket)
