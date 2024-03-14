@@ -39,7 +39,7 @@ This sample app also shows the instrumentation setup necessary for observability
 
    a. Base URL:
    
-      - For `Starter` tier e.g.  https://spaceshooter.gamingservices.accelbyte.io
+      - For `Starter` tier e.g.  https://spaceshooter.prod.gamingservices.accelbyte.io
       - For `Premium` tier e.g.  https://dev.accelbyte.io
       
    b. A game namespace. If you don't have one yet, [create a game namespace](https://docs.accelbyte.io/gaming-services/tutorials/how-to/create-a-game-namespace/). Keep the `Namespace ID`.
@@ -175,12 +175,20 @@ To test the sample app, which runs locally with AGS, the `gRPC server` needs to 
 
 4. [Create an OAuth Client](https://docs.accelbyte.io/guides/access/iam-client.html) with `confidential` client type. Keep the `Client ID` and `Client Secret`.
 
-   - NAMESPACE:{namespace}:MATCHMAKING:RULES [CREATE, READ, UPDATE, DELETE]
-   - NAMESPACE:{namespace}:MATCHMAKING:FUNCTIONS [CREATE, READ, UPDATE, DELETE]
-   - NAMESPACE:{namespace}:MATCHMAKING:POOL [CREATE, READ, UPDATE, DELETE]
-   - NAMESPACE:{namespace}:MATCHMAKING:TICKET [CREATE, READ, UPDATE, DELETE]
-   - ADMIN:NAMESPACE:{namespace}:INFORMATION:USER:* [CREATE, READ, UPDATE, DELETE]
-   - ADMIN:NAMESPACE:{namespace}:SESSION:CONFIGURATION:* [CREATE, READ, UPDATE, DELETE]
+   - For AGS Premium customers:
+      - NAMESPACE:{namespace}:MATCHMAKING:RULES [CREATE, READ, UPDATE, DELETE]
+      - NAMESPACE:{namespace}:MATCHMAKING:FUNCTIONS [CREATE, READ, UPDATE, DELETE]
+      - NAMESPACE:{namespace}:MATCHMAKING:POOL [CREATE, READ, UPDATE, DELETE]
+      - NAMESPACE:{namespace}:MATCHMAKING:TICKET [CREATE, READ, UPDATE, DELETE]
+      - ADMIN:NAMESPACE:{namespace}:INFORMATION:USER:* [CREATE, READ, UPDATE, DELETE]
+      - ADMIN:NAMESPACE:{namespace}:SESSION:CONFIGURATION:* [CREATE, READ, UPDATE, DELETE]
+   - For AGS Starter customers:
+      - Matchmaking -> Rule Sets (Read, Create, Update, Delete)
+      - Matchmaking -> Match Functions (Read, Create, Update, Delete)
+      - Matchmaking -> Match Pools (Read, Create, Update, Delete)
+      - Matchmaking -> Match Tickets (Read, Create, Update, Delete)
+      - IAM -> Users (Read, Create, Update, Delete)
+      - Session -> Configuration Template (Read, Create, Update, Delete)
 
    > :warning: **Oauth Client created in this step is different from the one from Prerequisites section:** It is required by [demo.sh](demo.sh) script in the next step to register the `gRPC Server` URL and also to create and delete test users.
 
