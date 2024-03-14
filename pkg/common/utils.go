@@ -71,7 +71,7 @@ func LogJSONFormatter(data interface{}) string {
 
 		return ""
 	} else {
-		logrus.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
+		logrus.SetFormatter(&logrus.JSONFormatter{PrettyPrint: false})
 
 		return string(response)
 	}
