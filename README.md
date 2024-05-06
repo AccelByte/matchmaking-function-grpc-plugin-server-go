@@ -84,6 +84,10 @@ custom matchmaking logic which matches 2 players may be implemented.
 
       - Use binary available [here](https://www.postman.com/downloads/)
 
+   f. [ngrok](https://ngrok.com/)
+
+      - Follow installation instruction for Linux [here](https://ngrok.com/download)
+
 2. Access to AGS environment.
 
    a. Base URL:

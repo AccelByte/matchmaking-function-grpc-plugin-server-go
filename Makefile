@@ -53,9 +53,9 @@ test:
 		sh -c "go test matchmaking-function-grpc-plugin-server-go/pkg/server"
 
 ngrok:
+	@which ngrok || (echo "ngrok is not installed" ; exit 1)
 	@test -n "$(NGROK_AUTHTOKEN)" || (echo "NGROK_AUTHTOKEN is not set" ; exit 1)
-	docker run --rm -it --net=host -e NGROK_AUTHTOKEN=$(NGROK_AUTHTOKEN) ngrok/ngrok:3-alpine \
-			tcp 6565	# gRPC server port
+	ngrok tcp 6565	# gRPC server port
 
 test_sample_local_hosted:
 	@test -n "$(ENV_PATH)" || (echo "ENV_PATH is not set"; exit 1)
