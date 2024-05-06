@@ -80,11 +80,33 @@ custom matchmaking logic which matches 2 players may be implemented.
       go version go1.19.0 linux/amd64
       ```
 
-   e. [Postman](https://www.postman.com/)
+   e. Curl
+
+      - To install from Ubuntu repository, run: `sudo apt update && sudo apt install curl`
+
+      ```
+      curl --version
+
+      curl 7.81.0 (x86_64-pc-linux-gnu)
+      ...
+      ```
+
+   f. Jq
+
+      - To install from Ubuntu repository, run: `sudo apt update && sudo apt install jq`
+
+      ```
+      jq --version
+
+      jq-1.6
+      ...
+      ```
+
+   g. [Postman](https://www.postman.com/)
 
       - Use binary available [here](https://www.postman.com/downloads/)
 
-   f. [ngrok](https://ngrok.com/)
+   h. [ngrok](https://ngrok.com/)
 
       - Follow installation instruction for Linux [here](https://ngrok.com/download)
 
