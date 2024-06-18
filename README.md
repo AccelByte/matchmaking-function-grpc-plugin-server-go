@@ -32,7 +32,7 @@ custom matchmaking logic which matches 2 players may be implemented.
 
 ## Prerequisites
 
-1. Windows 11 WSL2 or Linux Ubuntu 22.04 with the following tools installed.
+1. Windows 11 WSL2 or Linux Ubuntu 22.04 or macOS 14+ with the following tools installed.
 
    a. Bash
 
@@ -110,6 +110,8 @@ custom matchmaking logic which matches 2 players may be implemented.
 
       - Follow installation instruction for Linux [here](https://ngrok.com/download)
 
+   > :exclamation: In macOS, you may use [Homebrew](https://brew.sh/) to easily install some of the tools above.
+
 2. Access to AGS environment.
 
    a. Base URL:
@@ -140,7 +142,7 @@ setup steps.
    PLUGIN_GRPC_SERVER_AUTH_ENABLED=true     # Enable or disable access token validation
    ```
 
-   > :info: **In this sample app, PLUGIN_GRPC_SERVER_AUTH_ENABLED is `true` by default**: If it is set to `false`, the 
+   > :exclamation: **In this sample app, PLUGIN_GRPC_SERVER_AUTH_ENABLED is `true` by default**: If it is set to `false`, the 
    `gRPC server` can be invoked without `AccelByte Gaming Services` access token. This option is provided for development 
    purpose only. It is recommended to enable `gRPC server` access token validation in production environment.
 
