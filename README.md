@@ -263,12 +263,12 @@ To test the sample app, which runs locally with AGS, the `gRPC server` needs to 
       - `ADMIN:NAMESPACE:{namespace}:INFORMATION:USER:* [CREATE,READ,UPDATE,DELETE]`
       - `ADMIN:NAMESPACE:{namespace}:SESSION:CONFIGURATION:* [CREATE,READ,UPDATE,DELETE]`
    - For AGS Starter customers:
-      - Matchmaking -> Rule Sets (Read, Create, Update, Delete)
-      - Matchmaking -> Match Functions (Read, Create, Update, Delete)
-      - Matchmaking -> Match Pools (Read, Create, Update, Delete)
-      - Matchmaking -> Match Tickets (Read, Create, Update, Delete)
-      - IAM -> Users (Read, Create, Update, Delete)
-      - Session -> Configuration Template (Read, Create, Update, Delete)
+      - Matchmaking -> Rule Sets (Create, Read, Update, Delete)
+      - Matchmaking -> Match Functions (Create, Read, Update, Delete)
+      - Matchmaking -> Match Pools (Create, Read, Update, Delete)
+      - Matchmaking -> Match Tickets (Create, Read, Update, Delete)
+      - IAM -> Users (Create, Read, Update, Delete)
+      - Session -> Configuration Template (Create, Read, Update, Delete)
 
    > :warning: **Oauth Client created in this step is different from the one from Prerequisites section:** It is required by [demo.sh](demo.sh) script in the next step to register the `gRPC Server` URL and also to create and delete test users.
 
