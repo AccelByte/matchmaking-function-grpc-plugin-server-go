@@ -226,7 +226,8 @@ The custom functions in this sample app can be tested locally using [Postman](ht
                }
            ],
            "region_preferences": [
-               "any"
+               "us-east-2", 
+               "us-west-2"
            ],
            "match_attributes": null
        }

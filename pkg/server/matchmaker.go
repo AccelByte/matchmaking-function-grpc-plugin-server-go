@@ -12,11 +12,12 @@ import (
 
 	"time"
 
-	pie_ "github.com/elliotchance/pie/v2"
 	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	matchfunction "matchmaking-function-grpc-plugin-server-go/pkg/pb"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
+
+	pie_ "github.com/elliotchance/pie/v2"
 )
 
 // New returns a MatchMaker of the MatchLogic interface
@@ -164,8 +165,10 @@ func buildMatch(scope *common.Scope, ticket matchmaker.Ticket, unmatchedTickets 
 			players = append(players, unmatchedTickets[i].Players...)
 		}
 		playerIDs := pie_.Map(players, playerdata.ToID)
+
+		// RegionPreference value is just an example. The value(s) should be from the best region on the matchmaker.Ticket.Latencies
 		match := matchmaker.Match{
-			RegionPreference: []string{"any"},
+			RegionPreference: []string{"us-east-2", "us-west-2"},
 			Tickets:          make([]matchmaker.Ticket, numPlayers),
 			Teams: []matchmaker.Team{
 				{UserIDs: playerIDs},
