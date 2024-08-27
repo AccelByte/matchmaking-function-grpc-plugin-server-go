@@ -1,4 +1,4 @@
-FROM ngrok/ngrok as ngrok_image
+FROM ngrok/ngrok AS ngrok_image
 
 FROM alpine:3.18
 WORKDIR /workspace
