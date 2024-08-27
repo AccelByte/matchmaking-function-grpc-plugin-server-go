@@ -91,7 +91,7 @@ echo Creating rule sets ...
 api_curl "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/rulesets" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     -H 'Content-Type: application/json' \
-    -d "{\"data\":{\"shipCountMin\":2,\"shipCountMax\":2},\"name\":\"${DEMO_PREFIX}_ruleset\"}"
+    -d "{\"enable_custom_match_function\":true,\"data\":{\"shipCountMin\":2,\"shipCountMax\":2},\"name\":\"${DEMO_PREFIX}_ruleset\"}"
 
 if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
   exit 1
