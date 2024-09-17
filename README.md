@@ -417,5 +417,5 @@ After testing, you can deploy the app to AGS. Follow these steps:
 
 ## Next Step
 
-Proceed to modify this project template and implement your own custom functions.
+Proceed to create your own `Extend Override` app for `matchmaking function` by modifying this project. See [here](https://docs.accelbyte.io/gaming-services/services/extend/override-ags-feature/matchmaking-function/) for more details.
 
