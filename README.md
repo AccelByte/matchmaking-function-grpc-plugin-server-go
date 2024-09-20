@@ -183,7 +183,7 @@ To be able to run this app, you will need to follow these setup steps.
 
 1. Create a Docker compose `.env` file by copying the content of [.env.template](.env.template) file.
 
-   > :warning: **The host OS environment variables have higher precedence compared to `.env` file variables**: If the variables in `.env` file do not seem to take effect properly, check if there are host OS environment variables with the same name. See Docker's documentation about [Docker compose environment variables precedence](https://docs.docker.com/compose/environment-variables/envvars-precedence/).
+   > :warning: **The host OS environment variables have higher precedence compared to `.env` file variables**: If the variables in `.env` file do not seem to take effect properly, check if there are host OS environment variables with the same name. See Docker's documentation about [Docker compose environment variables precedence](https://docs.docker.com/compose/how-tos/environment-variables/envvars-precedence/).
 
 2. Fill in the required environment variables in the `.env` file as follows.
 
