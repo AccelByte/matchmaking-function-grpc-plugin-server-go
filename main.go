@@ -68,11 +68,9 @@ func main() {
 
 	srvMetrics := promgrpc.NewServerMetrics()
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
-		otelgrpc.UnaryServerInterceptor(),
 		srvMetrics.UnaryServerInterceptor(),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
-		otelgrpc.StreamServerInterceptor(),
 		srvMetrics.StreamServerInterceptor(),
 	}
 
@@ -94,6 +92,7 @@ func main() {
 
 	// Create gRPC Server
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(unaryServerInterceptors...),
 		grpc.ChainStreamInterceptor(streamServerInterceptors...),
 	)
