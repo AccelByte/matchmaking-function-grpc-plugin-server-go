@@ -59,7 +59,23 @@ linters:
     - lll
     - testpackage
     - dupl
-  fast: false
+    - funlen
+    - gci
+    - godot
+    - gofumpt
+    - paralleltest
+    - tagliatelle
+    - revive
+    - unparam
+    - cyclop
+    - gomoddirectives
+    - govet
+    - nestif
+    - forcetypeassert
+    - gochecknoglobals
+    - scopelint
+
+  fast: true
 
 linters-settings:
   govet:

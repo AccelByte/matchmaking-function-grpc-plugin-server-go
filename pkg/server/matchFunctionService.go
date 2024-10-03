@@ -209,10 +209,12 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 	in, err := server.Recv()
 	if err == io.EOF {
 		scope.Log.Debug("Recv ended")
+
 		return nil
 	}
 	if err != nil {
 		scope.Log.WithError(err).Error("Recv error")
+
 		return err
 	}
 
@@ -241,6 +243,7 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 		proposal, ok := <-backfillProposal
 		if !ok {
 			scope.Log.Info("no more proposal")
+
 			return nil
 		}
 
@@ -253,6 +256,7 @@ func (m *MatchFunctionServer) BackfillMatches(server matchfunctiongrpc.MatchFunc
 		err = server.Send(&resp)
 		if err != nil {
 			scope.Log.WithError(err).Error("send proposal error")
+
 			return err
 		}
 	}
@@ -270,10 +274,12 @@ func (m *MatchFunctionServer) fetchBackfillTickets(ctx context.Context, ticketPr
 		in, err := server.Recv()
 		if err == io.EOF {
 			log.Info("Ticket Recv ended")
+
 			return
 		}
 		if err != nil {
 			log.WithError(err).Error("Recv error")
+
 			return
 		}
 

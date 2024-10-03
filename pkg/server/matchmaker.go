@@ -88,6 +88,7 @@ func (b MatchMaker) MakeMatches(scope *common.Scope, ticketProvider TicketProvid
 	rule, ok := matchRules.(GameRules)
 	if !ok {
 		log.Errorf("unexpected game rule type %T", matchRules)
+
 		return nil
 	}
 
@@ -197,6 +198,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 	rule, ok := matchRules.(GameRules)
 	if !ok {
 		scope.Log.Errorf("unexpected game rule type %T", matchRules)
+
 		return nil
 	}
 
@@ -220,6 +222,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 				if !ok {
 					scope.Log.Info("no more match tickets")
 					nextTicket = nil
+
 					continue
 				}
 				scope.Log.WithField("ticketId", ticket.TicketID).Infof("got a match ticket")
@@ -228,6 +231,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 				if !ok {
 					scope.Log.Info("no more backfill tickets")
 					nextBackfillTicket = nil
+
 					continue
 				}
 				scope.Log.WithField("ticketId", backfillTicket.TicketID).Infof("got a backfill ticket")
@@ -289,6 +293,7 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 				} else {
 					unmatchedBackfillTickets = nil
 				}
+
 				break
 			}
 		}

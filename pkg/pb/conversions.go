@@ -261,7 +261,7 @@ func ProtoBackfillTicketToMatchfunctionBackfillTicket(ticket *BackfillTicket) ma
 }
 
 func protoBackfillTicketTeamToMatch(protoTeams []*BackfillTicket_Team) []matchmaker.Team {
-	var teams []matchmaker.Team
+	teams := make([]matchmaker.Team, 0, len(protoTeams))
 	for _, protoTeam := range protoTeams {
 		team := matchmaker.Team{
 			UserIDs: pie_.Map(protoTeam.UserIds, func(s string) playerdata.ID {
@@ -319,5 +319,6 @@ func PlayerDataToParties(players []playerdata.PlayerData) []matchmaker.Party {
 			UserIDs: userIDs,
 		})
 	}
+
 	return parties
 }

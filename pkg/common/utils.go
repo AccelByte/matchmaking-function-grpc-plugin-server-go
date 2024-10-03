@@ -79,5 +79,6 @@ func LogJSONFormatter(data interface{}) string {
 
 func getUUID() string {
 	id := uuid.New()
+
 	return strings.Replace(id.String(), "-", "", -1)
 }
