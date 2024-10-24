@@ -18,6 +18,7 @@ fi
 
 DEMO_PREFIX='mmv2_grpc_demo'
 NUMBER_OF_PLAYERS=3
+PLAYER_USER_ID_LIST=()
 
 api_curl()
 {
@@ -38,11 +39,22 @@ get_code_challenge()
 
 function clean_up()
 {
-  for USER_ID in ${PLAYER_USER_ID_LIST[@]}; do
-    echo Clean up player UserId: $USER_ID ...
+  echo Getting player ...
 
-    api_curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" \
-        -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null   # Ignore delete error
+  for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
+    echo Getting existing player $PLAYER_NUMBER ${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com ...
+
+    USER_ID=$(api_curl -X GET "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users?emailAddress=${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com" -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' | jq --raw-output .userId)
+
+    PLAYER_USER_ID_LIST+=( $USER_ID )
+
+    # shellcheck disable=SC2068
+    for USER_ID in ${PLAYER_USER_ID_LIST[@]}; do
+      echo Clean up existing player UserId: $USER_ID ...
+
+      api_curl -X DELETE "${AB_BASE_URL}/iam/v3/admin/namespaces/$AB_NAMESPACE/users/$USER_ID/information" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" >/dev/null   # Ignore delete error
+    done
   done
 
   echo Clean up match pool ...
@@ -72,6 +84,8 @@ if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
   cat api_curl_http_response.out
   exit 1
 fi
+
+clean_up
 
 trap clean_up EXIT
 
@@ -137,8 +151,6 @@ api_curl "${AB_BASE_URL}/match2/v1/namespaces/$AB_NAMESPACE/match-pools" \
 if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
   exit 1
 fi
-
-PLAYER_USER_ID_LIST=()
 
 for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   echo Creating player $PLAYER_NUMBER ${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com ...
