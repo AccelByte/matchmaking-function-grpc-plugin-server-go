@@ -13,8 +13,14 @@ import (
 	_ "net/http/pprof"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/repository"
+	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
+
+	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	promgrpc "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
@@ -90,6 +96,27 @@ func main() {
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		srvMetrics.StreamServerInterceptor(),
 		logging.StreamServerInterceptor(common.InterceptorLogger(logrusLogger), loggingOptions...),
+	}
+
+	// Preparing the IAM authorization
+	var tokenRepo repository.TokenRepository = sdkAuth.DefaultTokenRepositoryImpl()
+	var configRepo repository.ConfigRepository = sdkAuth.DefaultConfigRepositoryImpl()
+	var refreshRepo repository.RefreshTokenRepository = &sdkAuth.RefreshTokenImpl{AutoRefresh: true, RefreshRate: 0.01}
+
+	// Configure IAM authorization
+	if strings.ToLower(common.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
+		common.OAuth = &iam.OAuth20Service{
+			Client:                 factory.NewIamClient(configRepo),
+			ConfigRepository:       configRepo,
+			TokenRepository:        tokenRepo,
+			RefreshTokenRepository: refreshRepo,
+		}
+
+		common.OAuth.SetLocalValidation(true)
+
+		unaryServerInterceptors = append(unaryServerInterceptors, common.UnaryAuthServerIntercept)
+		streamServerInterceptors = append(streamServerInterceptors, common.StreamAuthServerIntercept)
+		logrus.Infof("added auth interceptors")
 	}
 
 	// Create gRPC Server
