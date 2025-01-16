@@ -384,7 +384,7 @@ will be accessible at http://localhost:3000.
 
 After testing, you can deploy the app to AGS. Follow these steps:
 
-1. [Create a new Extend Override App on Admin Portal](https://docs.accelbyte.io/gaming-services/services/extend/override-ags-feature/getting-started-with-matchmaking-customization/#create-an-extend-app). Keep the `Repository URI`.
+1. [Create a new Extend Override App on Admin Portal](https://docs.accelbyte.io/gaming-services/services/extend/override/getting-started-with-matchmaking-customization/#create-an-extend-app). Keep the `Repository URI`.
 
 2. Download and setup [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/) (only if it has not been done previously).
 
