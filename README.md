@@ -329,7 +329,7 @@ can use something like [ngrok](https://ngrok.com/).
       - IAM -> Users (Create, Read, Update, Delete)
       - Session -> Configuration Template (Create, Read, Update, Delete)
 
-   > :warning: **Oauth Client created in this step is different from the one from Prerequisites section:** It is required by the Postman collection in the next step to register the `gRPC Server` URL and also to create and delete test users.
+   > :warning: **Oauth Client created in this step is different from the one from Prerequisites section:** It is required by the [Postman collection](demo/matchmaking-function-grpc-plugin-server.postman_collection.json) in the next step to register the `gRPC Server` URL and also to create and delete test users.
 
    5. Import the [Postman collection](demo/matchmaking-function-grpc-plugin-server.postman_collection.json) into Postman to simulate the matchmaking flow. Follow the instructions in the Postman collection overview to set up the environment, using the Client ID and Client Secret from the previous step. Monitor the Extend app console log while the matchmaking flow is running. The gRPC server methods should be triggered when creating match tickets, and players should be grouped in pairs.
 
