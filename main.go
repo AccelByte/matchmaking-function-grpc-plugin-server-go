@@ -8,19 +8,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
-	"runtime"
-	"strings"
-	"syscall"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/repository"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
-
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	promgrpc "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -29,6 +22,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"os/signal"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -102,18 +103,18 @@ func main() {
 	// Preparing the IAM authorization
 	var tokenRepo repository.TokenRepository = sdkAuth.DefaultTokenRepositoryImpl()
 	var configRepo repository.ConfigRepository = sdkAuth.DefaultConfigRepositoryImpl()
-	var refreshRepo repository.RefreshTokenRepository = &sdkAuth.RefreshTokenImpl{AutoRefresh: true, RefreshRate: 0.01}
+	var refreshRepo repository.RefreshTokenRepository = &sdkAuth.RefreshTokenImpl{RefreshRate: 1.0, AutoRefresh: true}
 
-	// Configure IAM authorization
+	oauthService := iam.OAuth20Service{
+		Client:                 factory.NewIamClient(configRepo),
+		TokenRepository:        tokenRepo,
+		RefreshTokenRepository: refreshRepo,
+		ConfigRepository:       configRepo,
+	}
+
 	if strings.ToLower(common.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
-		common.OAuth = &iam.OAuth20Service{
-			Client:                 factory.NewIamClient(configRepo),
-			ConfigRepository:       configRepo,
-			TokenRepository:        tokenRepo,
-			RefreshTokenRepository: refreshRepo,
-		}
-
-		common.OAuth.SetLocalValidation(true)
+		refreshInterval := common.GetEnvInt("REFRESH_INTERVAL", 600)
+		common.Validator = common.NewTokenValidator(oauthService, time.Duration(refreshInterval)*time.Second, true)
 
 		unaryServerInterceptors = append(unaryServerInterceptors, common.UnaryAuthServerIntercept)
 		streamServerInterceptors = append(streamServerInterceptors, common.StreamAuthServerIntercept)

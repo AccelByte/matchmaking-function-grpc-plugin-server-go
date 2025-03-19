@@ -8,6 +8,7 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -28,6 +29,7 @@ func TestTokenValidator_ValidateToken(t *testing.T) {
 	t.Skip() // "TODO: mock and remove hardcoded client id and secret"
 
 	// Arrange
+	namespace := GetEnv("AB_NAMESPACE", "accelbyte")
 	baseUrl := "https://development.accelbyte.io"
 	clientId := ""
 	clientSecret := ""
@@ -57,16 +59,11 @@ func TestTokenValidator_ValidateToken(t *testing.T) {
 		return
 	}
 
-	authService.SetLocalValidation(true)                                          // true will do it locally, false will do it remotely
-	claims, errClaims := authService.ParseAccessTokenToClaims(accessToken, false) // false will not validate using client namespace
-	if errClaims != nil {
-		assert.Fail(t, errClaims.Error())
-
-		return
-	}
+	Validator = NewTokenValidator(authService, time.Duration(600)*time.Second, true)
+	Validator.Initialize()
 
 	// Act
-	err = authService.Validate(accessToken, nil, &claims.ExtendNamespace, nil)
+	err = authService.Validate(accessToken, nil, &namespace, nil)
 
 	// Assert
 	assert.Nil(t, err)
