@@ -15,29 +15,14 @@ import (
 	"testing"
 )
 
-type MyConfigRepo struct {
-	baseUrl      string
-	clientId     string
-	clientSecret string
-}
-
-func (c *MyConfigRepo) GetClientId() string       { return c.clientId }
-func (c *MyConfigRepo) GetClientSecret() string   { return c.clientSecret }
-func (c *MyConfigRepo) GetJusticeBaseUrl() string { return c.baseUrl }
-
 func TestTokenValidator_ValidateToken(t *testing.T) {
 	t.Skip() // "TODO: mock and remove hardcoded client id and secret"
 
 	// Arrange
 	namespace := GetEnv("AB_NAMESPACE", "accelbyte")
-	baseUrl := "https://development.accelbyte.io"
 	clientId := ""
 	clientSecret := ""
-	configRepo := &MyConfigRepo{
-		baseUrl:      baseUrl,
-		clientId:     clientId,
-		clientSecret: clientSecret,
-	}
+	configRepo := sdkAuth.DefaultConfigRepositoryImpl()
 	tokenRepo := sdkAuth.DefaultTokenRepositoryImpl()
 	authService := iam.OAuth20Service{
 		Client:           factory.NewIamClient(configRepo),
