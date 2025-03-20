@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"os/signal"
 	"runtime"
 	"strings"
@@ -203,6 +204,8 @@ func main() {
 
 	flag.Parse()
 
-	ctx, _ = signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	<-ctx.Done()
+	logrus.Infof("signal received")
 }
