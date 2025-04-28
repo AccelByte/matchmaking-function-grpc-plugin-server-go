@@ -9,8 +9,6 @@ BUILDER := extend-builder
 
 GOLANG_DOCKER_IMAGE := golang:1.19
 
-TEST_SAMPLE_CONTAINER_NAME := sample-override-test
-
 proto:
 	rm -rfv pkg/pb/*.pb.go
 	mkdir -p pkg/pb
@@ -47,10 +45,6 @@ imagex_push:
 	docker buildx inspect $(BUILDER) || docker buildx create --name $(BUILDER) --use
 	docker buildx build -t ${REPO_URL}:${IMAGE_TAG} --platform linux/amd64 --push .
 	docker buildx rm --keep-state $(BUILDER)
-
-test:
-	docker run -t --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/ -e GOCACHE=/data/.cache/go-build $(GOLANG_DOCKER_IMAGE) \
-		sh -c "go test matchmaking-function-grpc-plugin-server-go/pkg/server"
 
 ngrok:
 	@which ngrok || (echo "ngrok is not installed" ; exit 1)
