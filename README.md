@@ -107,60 +107,15 @@ your own logic for the custom functions.
       go version go1.19.0 ...
       ```
 
-   e. Curl
-
-      - On Windows WSL2 or Linux Ubuntu:
-
-         To install from the Ubuntu repository, run `sudo apt update && sudo apt install curl`.
-
-         ```
-         curl --version
-
-         curl 7.81.0 (x86_64-pc-linux-gnu)
-         ...
-         ```
-
-      - On macOS:
-
-         ```
-         curl --version
-
-         curl 8.4.0 (x86_64-apple-darwin23.0) ...
-         ...
-         ```
-
-   f. Jq
-
-      - On Windows WSL2 or Linux Ubuntu:
-
-         To install from the Ubuntu repository, run `sudo apt update && sudo apt install jq`.
-
-         ```
-         jq --version
-
-         jq-1.6
-         ...
-         ```
-
-      - On macOS:
-
-         To install using Homebrew, run `brew install jq`.
-
-         ```
-         jq --version
-
-         jq-1.7.1
-         ```
-
-   g. [Postman](https://www.postman.com/)
+   e. [Postman](https://www.postman.com/)
 
       - Use the available binary from [Postman](https://www.postman.com/downloads/).
 
-   h. [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli)
+   f. [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli)
 
       - Use the available binary from [extend-helper-cli](https://github.com/AccelByte/extend-helper-cli/releases).
 
-   i. Local tunnel service that has TCP forwarding capability, such as:
+   g. Local tunnel service that has TCP forwarding capability, such as:
 
       - [Ngrok](https://ngrok.com/)
          
