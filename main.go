@@ -11,6 +11,15 @@ import (
 	_ "net/http/pprof"
 	"os"
 
+	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"os/signal"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/repository"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
@@ -22,14 +31,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
-	"net"
-	"net/http"
-	_ "net/http/pprof"
-	"os/signal"
-	"runtime"
-	"strings"
-	"syscall"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -112,7 +113,7 @@ func main() {
 		ConfigRepository:       configRepo,
 	}
 
-	if strings.ToLower(common.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "false")) == "true" {
+	if strings.ToLower(common.GetEnv("PLUGIN_GRPC_SERVER_AUTH_ENABLED", "true")) == "true" {
 		refreshInterval := common.GetEnvInt("REFRESH_INTERVAL", 600)
 		common.Validator = common.NewTokenValidator(oauthService, time.Duration(refreshInterval)*time.Second, true)
 
