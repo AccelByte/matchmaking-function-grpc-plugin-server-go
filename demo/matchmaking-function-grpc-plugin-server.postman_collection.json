@@ -283,7 +283,7 @@
 						"exec": [
 							"if (!pm.variables.get(\"GRPC_SERVER_URL\")) {",
 							"    console.log(\"Skipping this request because GRPC_SERVER_URL is not found.\");",
-							"    postman.setNextRequest('50-create-match-function-with-app-name'); ",
+							"    pm.execution.skipRequest(); ",
 							"} else {",
 							"    var extendAppUrl = pm.variables.get(\"GRPC_SERVER_URL\");",
 							"    console.log(`Registering match function with url: ${extendAppUrl}`);",
@@ -350,7 +350,8 @@
 					"script": {
 						"exec": [
 							"if (!pm.variables.get(\"EXTEND_APP_NAME\")) {",
-							"    postman.setNextRequest('60-create-match-pool');",
+							"    console.log(\"Skipping this request because EXTEND_APP_NAME is not found.\");",
+							"    pm.execution.skipRequest();",
 							"} else {",
 							"    var extendAppName = pm.variables.get(\"EXTEND_APP_NAME\");",
 							"    console.log(`Registering match function with app name: ${extendAppName}`);",
@@ -840,9 +841,9 @@
 							"pm.test(\"Match ticket Player 1\", function () {",
 							"    var responseJson = pm.response.json();",
 							"    ",
-							"    if (responseJson.matchTicketID !== undefined) {",
-							"        console.log(`Player 1 userId:${pm.variables.get('TEST_USER_ID_PLAYER_1')} match ticket: ${responseJson.matchTicketID}`);",
-							"    }",
+							"    pm.expect(responseJson.matchTicketID !== undefined).to.be.true\r",
+							"    ",
+							"    console.log(`Player 1 userId:${pm.variables.get('TEST_USER_ID_PLAYER_1')} match ticket: ${responseJson.matchTicketID}`);",
 							"});"
 						],
 						"type": "text/javascript",
@@ -908,9 +909,9 @@
 							"pm.test(\"Match ticket Player 2\", function () {",
 							"    var responseJson = pm.response.json();",
 							"    ",
-							"    if (responseJson.matchTicketID !== undefined) {",
-							"        console.log(`Player 2 userId:${pm.variables.get('TEST_USER_ID_PLAYER_2')} match ticket: ${responseJson.matchTicketID}`);",
-							"    }",
+							"    pm.expect(responseJson.matchTicketID !== undefined).to.be.true\r",
+							"    ",
+							"    console.log(`Player 2 userId:${pm.variables.get('TEST_USER_ID_PLAYER_2')} match ticket: ${responseJson.matchTicketID}`);",
 							"});"
 						],
 						"type": "text/javascript",
@@ -976,9 +977,9 @@
 							"pm.test(\"Match ticket Player 3\", function () {",
 							"    var responseJson = pm.response.json();",
 							"    ",
-							"    if (responseJson.matchTicketID !== undefined) {",
-							"        console.log(`Player 3 userId:${pm.variables.get('TEST_USER_ID_PLAYER_3')} match ticket: ${responseJson.matchTicketID}`);",
-							"    }",
+							"    pm.expect(responseJson.matchTicketID !== undefined).to.be.true\r",
+							"    ",
+							"    console.log(`Player 3 userId:${pm.variables.get('TEST_USER_ID_PLAYER_3')} match ticket: ${responseJson.matchTicketID}`);",
 							"});"
 						],
 						"type": "text/javascript",
