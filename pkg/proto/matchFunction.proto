@@ -5,7 +5,7 @@
 syntax = "proto3";
 
 package accelbyte.matchmaking.matchfunction;
-// Version v1.0.0
+// Version v1.1.0
 
 option csharp_namespace = "AccelByte.MatchmakingV2.MatchFunction";
 option go_package = "accelbyte.net/matchmakingv2/matchfunction";
@@ -54,7 +54,8 @@ message EnrichTicketResponse {
 message MakeMatchesRequest {
   message MakeMatchesParameters{
     Scope scope = 1;
-    Rules rules = 2; 
+    Rules rules = 2;
+    uint64 tickId = 3;
   }
   oneof request_type {
     MakeMatchesParameters parameters = 1;
@@ -82,6 +83,7 @@ message Match {
   message Team {
     repeated string user_ids = 1;
     repeated Party parties = 2;
+    string team_id = 3;
   }
   repeated Ticket tickets = 1;
   repeated Team teams = 2;
@@ -119,6 +121,7 @@ message BackfillProposal {
   message Team {
     repeated string user_ids = 1;
     repeated Party parties = 2;
+    string team_id = 3;
   }
   string backfill_ticket_id = 1;
   google.protobuf.Timestamp   CreatedAt = 2;
@@ -134,6 +137,7 @@ message BackfillMakeMatchesRequest {
   message MakeMatchesParameters{
     Scope scope = 1;
     Rules rules = 2;
+    uint64 tickId = 3;
   }
   oneof request_type {
     MakeMatchesParameters parameters = 1;
@@ -150,6 +154,7 @@ message BackfillTicket {
   message Team {
     repeated string user_ids = 1;
     repeated Party parties = 2;
+    string team_id = 3;
   }
   message PartialMatch {
     repeated Ticket tickets = 1;

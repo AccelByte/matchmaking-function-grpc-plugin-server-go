@@ -168,13 +168,19 @@ func buildMatch(scope *common.Scope, ticket matchmaker.Ticket, unmatchedTickets 
 		playerIDs := pie_.Map(players, playerdata.ToID)
 
 		// RegionPreference value is just an example. The value(s) should be from the best region on the matchmaker.Ticket.Latencies
+		teamID := common.GenerateUUID()
 		match := matchmaker.Match{
 			RegionPreference: []string{"us-east-2", "us-west-2"},
 			Tickets:          make([]matchmaker.Ticket, numPlayers),
 			Teams: []matchmaker.Team{
-				{UserIDs: playerIDs},
+				{UserIDs: playerIDs, TeamID: teamID},
 			},
 			Backfill: backfill,
+			MatchAttributes: map[string]interface{}{
+				"assignment": map[string]interface{}{
+					"small-team-1": []string{teamID},
+				},
+			},
 		}
 		copy(match.Tickets, unmatchedTickets)
 		scope.Log.Info("MATCHMAKER: sending to results channel")
@@ -274,6 +280,7 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 			proposedTeam = append(proposedTeam, matchmaker.Team{
 				UserIDs: pie_.Map(ticket.Players, playerdata.ToID),
 				Parties: matchfunction.PlayerDataToParties(ticket.Players),
+				TeamID:  common.GenerateUUID(),
 			})
 
 			log.Info("Send backfill proposal!")

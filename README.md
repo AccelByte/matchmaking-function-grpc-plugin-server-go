@@ -249,6 +249,229 @@ This app can be tested locally using [Postman](https://www.postman.com/).
    }
    ```
 
+#### MakeMatches gRPC Endpoint Details
+
+The `MakeMatches` endpoint is a **bidirectional streaming gRPC method** that handles the matchmaking process. Here's how to properly invoke it:
+
+**Service**: `accelbyte.matchmaking.matchfunction.MatchFunction`  
+**Method**: `MakeMatches`  
+**Type**: Bidirectional Streaming (Client and Server both send streams)
+
+**Request Structure**:
+- **Parameters Message** (sent first to initialize the matchmaking session):
+  ```json
+  {
+      "parameters": {
+          "scope": {
+              "ab_trace_id": "optional-trace-id"
+          },
+          "rules": {
+              "json": "{\"shipCountMin\":1, \"shipCountMax\":2}"
+          },
+          "tickId": 12345
+      }
+  }
+  ```
+
+- **Ticket Messages** (sent for each player to be matched):
+  ```json
+   {
+      "ticket": {
+         "CreatedAt": {
+               "nanos": 446183572,
+               "seconds": "3"
+         },
+         "latencies": {
+               "us-east-2": 50,
+               "us-east-1": 10
+         },
+         "match_pool": "test_pool",
+         "namespace": "laboris",
+         "party_session_id": "party_id",
+         "players": [
+               {
+                  "player_id": "playerA",
+                  "attributes": {
+                     "fields": {
+                           "weapon": {
+                              "string_value": "sword"
+                           },
+                           "armor": {
+                              "string_value": "steel"
+                           },
+                           "mmr": {
+                              "number_value": 111
+                           }
+                     }
+                  }
+               }
+         ],
+         "ticket_attributes": {
+               "fields": {
+                  "bigTeam": {
+                     "string_value": "A"
+                  },
+                  "team_mmr": {
+                     "number_value": 123
+                  }
+               }
+         },
+         "ticket_id": "ticket_id_1234"
+      }
+   }
+  ```
+
+**Response Structure**:
+```json
+{
+    "match": {
+        "tickets": [
+            {
+                "players": [
+                    {
+                        "player_id": "playerA",
+                        "attributes": {
+                            "fields": {
+                                "mmr": {
+                                    "number_value": 111
+                                },
+                                "weapon": {
+                                    "string_value": "sword"
+                                },
+                                "armor": {
+                                    "string_value": "steel"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "latencies": {
+                    "us-east-2": "50",
+                    "us-east-1": "10"
+                },
+                "ticket_id": "ticket_id_1234",
+                "match_pool": "test_pool",
+                "CreatedAt": {
+                    "seconds": "3",
+                    "nanos": 446183572
+                },
+                "ticket_attributes": {
+                    "fields": {
+                        "bigTeam": {
+                            "string_value": "A"
+                        },
+                        "team_mmr": {
+                            "number_value": 123
+                        }
+                    }
+                },
+                "party_session_id": "party_id",
+                "namespace": "laboris"
+            },
+            {
+                "players": [
+                    {
+                        "player_id": "playerA",
+                        "attributes": {
+                            "fields": {
+                                "weapon": {
+                                    "string_value": "sword"
+                                },
+                                "armor": {
+                                    "string_value": "steel"
+                                },
+                                "mmr": {
+                                    "number_value": 111
+                                }
+                            }
+                        }
+                    }
+                ],
+                "latencies": {
+                    "us-east-2": "50",
+                    "us-east-1": "10"
+                },
+                "ticket_id": "ticket_id_1234",
+                "match_pool": "test_pool",
+                "CreatedAt": {
+                    "seconds": "3",
+                    "nanos": 446183572
+                },
+                "ticket_attributes": {
+                    "fields": {
+                        "bigTeam": {
+                            "string_value": "A"
+                        },
+                        "team_mmr": {
+                            "number_value": 123
+                        }
+                    }
+                },
+                "party_session_id": "party_id",
+                "namespace": "laboris"
+            }
+        ],
+        "teams": [
+            {
+                "user_ids": [
+                    "playerA",
+                    "playerA"
+                ],
+                "parties": [],
+                "team_id": "c1d988c43d72484994ab1a7d41c35055"
+            }
+        ],
+        "region_preferences": [
+            "us-east-2",
+            "us-west-2"
+        ],
+        "match_attributes": {
+            "fields": {
+                "assignment": {
+                    "struct_value": {
+                        "fields": {
+                            "small-team-1": {
+                                "list_value": {
+                                    "values": [
+                                        {
+                                            "string_value": "c1d988c43d72484994ab1a7d41c35055"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "backfill": false,
+        "server_name": "",
+        "client_version": "",
+        "server_pool": {
+            "claim_keys": [],
+            "server_provider": "",
+            "deployment": ""
+        }
+    }
+}
+```
+
+**Postman Setup Steps**:
+1. Create a new gRPC request in Postman
+2. Set server URL to `localhost:6565` (or `localhost:10000` if using grpc-plugin-dependencies)
+3. Select the `MakeMatches` method from the service list
+4. Click **Invoke** to start the streaming connection
+5. Send the parameters message first to initialize the session
+6. Send individual ticket messages for each player
+7. Monitor the response stream for match results
+
+**Important Notes**:
+- The `MakeMatches` method requires a streaming connection
+- Always send parameters first, then tickets
+- Multiple tickets can be sent in sequence
+- The server will respond with matches as they become available
+- The connection remains open until explicitly closed
+
 ### Test with AGS
 
 To test the app, which runs locally with AGS, the `gRPC server` needs to be connected to the internet. To do this without requiring public IP, you can use local tunnel service.
