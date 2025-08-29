@@ -46,6 +46,7 @@ type BackfillProposal struct {
 type Team struct {
 	UserIDs []playerdata.ID
 	Parties []Party
+	TeamID string
 }
 
 type Party struct {
