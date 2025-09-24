@@ -1,4 +1,4 @@
-// Copyright (c) 2023 AccelByte Inc. All Rights Reserved.
+// Copyright (c) 2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -25,41 +25,47 @@ service MatchFunction {
 
 // GetStatCodes
 message GetStatCodesRequest {
-  Rules rules = 1;
+  Rules rules = 1; // Rules JSON, can be used to derive stat codes based on the rule.
 }
 
 message StatCodesResponse {
-  repeated string codes = 1;
+  repeated string codes = 1; // List of stat code names (attributes).
 }
 
 // ValidateTicket
 message ValidateTicketRequest {
-  Ticket ticket = 1;
-  Rules rules = 2;
+  Ticket ticket = 1; // Ticket that needs to be validated against the rules.
+  Rules rules = 2; // Matchmaking rules used to validate the ticket.
 }
 message ValidateTicketResponse {
-  bool valid_ticket = 1;
+  bool valid_ticket = 1; // True if ticket is valid.
 }
 
 // EnrichTicket
 message EnrichTicketRequest {
-  Ticket ticket = 1;
-  Rules rules =2;
+  Ticket ticket = 1; // Ticket to be enriched; for example, add fields into ticket_attributes
+  Rules rules = 2;
 }
 message EnrichTicketResponse {
-  Ticket ticket = 1;
+  Ticket ticket = 1; // Returned enriched ticket.
 }
 
 // Make Matches
 message MakeMatchesRequest {
+  // MUST be the first message on the stream.
+  // All subsequent messages on this stream are tickets for a single logical batch.
   message MakeMatchesParameters{
     Scope scope = 1;
+
+    // Raw Rules JSON defining the strategy (Alliance, MMR windows, regions, etc.)
     Rules rules = 2;
+
+    // Monotonic tick identifier; used for server logs and idempotence advisory.
     uint64 tickId = 3;
   }
   oneof request_type {
-    MakeMatchesParameters parameters = 1;
-    Ticket ticket = 2;
+    MakeMatchesParameters parameters = 1; // sent exactly once
+    Ticket ticket = 2;  // sent 0..N times; all tickets MUST share the same match_pool the stream. All tickets in the stream must share the same match_pool.
   }
 }
 message MatchResponse {
@@ -71,25 +77,25 @@ message Scope {
 }
 
 message Rules {
-  string json = 1;
+  string json = 1; // Raw rules JSON consumed by match function to configure matching, validation, and backfill. Developers can define any rule they like.
 }
 
 message Party {
-  string party_id = 1;
-  repeated string user_ids = 2;
+  string party_id = 1; // Party/session identifier.
+  repeated string user_ids = 2; // Players belonging to this party, populated from the ticket's players.
 }
 
 message Match {
   message Team {
-    repeated string user_ids = 1;
-    repeated Party parties = 2;
-    string team_id = 3;
+    repeated string user_ids = 1; // Users assigned to this team (aggregated from tickets)
+    repeated Party parties = 2; // Parties included on this team (constructed from Ticket.party_session_id)
+    string team_id = 3;  // UUID (no hyphens)
   }
-  repeated Ticket tickets = 1;
-  repeated Team teams = 2;
-  repeated string region_preferences = 3;
-  google.protobuf.Struct match_attributes = 4;
-  bool backfill = 5;
+  repeated Ticket tickets = 1; // Tickets used to form this match
+  repeated Team teams = 2; // Team assignments produced by matching logic
+  repeated string region_preferences = 3; // Ordered region preferences for this match
+  google.protobuf.Struct match_attributes = 4; // Attributes for the session that can be used for backfill matches.
+  bool backfill = 5; // True when session is not full and need more players, the session will be added to backfill queue.
   string server_name = 6;
   string client_version = 7;
   ServerPool server_pool = 8;
@@ -104,15 +110,15 @@ message ServerPool {
 message Ticket {
   message PlayerData {
     string player_id = 1;
-    google.protobuf.Struct attributes = 2;
+    google.protobuf.Struct attributes = 2; // map[string]any of the player attributes. ELO or MMR is stored here as map[string]float64.
   }
   string ticket_id = 1;
   string match_pool = 2;
-  google.protobuf.Timestamp   CreatedAt = 3;
-  repeated PlayerData players = 4;
-  google.protobuf.Struct ticket_attributes = 5;
-  map<string, int64> latencies = 6;
-  string party_session_id = 7;
+  google.protobuf.Timestamp   CreatedAt = 3; // Ticket creation time.
+  repeated PlayerData players = 4; // A ticket can contain multiple players; MMR for a ticket is usually the average of player values.
+  google.protobuf.Struct ticket_attributes = 5; // map[string]any of ticket attributes. These attributes can be used to match with other tickets.
+  map<string, int64> latencies = 6; // Map of AWS region to player latencies in ms
+  string party_session_id = 7;  // If present, this is a party ticket. All players MUST be assigned as a unit.
   string namespace = 8;
 }
 
@@ -121,51 +127,58 @@ message BackfillProposal {
   message Team {
     repeated string user_ids = 1;
     repeated Party parties = 2;
-    string team_id = 3;
+    string team_id = 3;   // UUID (no hyphens)
   }
   string backfill_ticket_id = 1;
   google.protobuf.Timestamp   CreatedAt = 2;
-  repeated Ticket added_tickets = 3;
-  repeated Team proposed_teams = 4;
-  string proposal_id = 5;
+  repeated Ticket added_tickets = 3; // New tickets being added to the match.
+  repeated Team proposed_teams = 4; // Updated team composition after backfill.
+  string proposal_id = 5;  // UUID (no hyphens)
   string match_pool = 6;
-  string match_session_id = 7;
+  string match_session_id = 7; // The session ID of the match being updated.
 }
 
 // Backfill Make Matches
 message BackfillMakeMatchesRequest {
+  // MUST be the first message on the stream.
+  // All subsequent messages on this stream are tickets for a single logical batch.
   message MakeMatchesParameters{
     Scope scope = 1;
+
+    // Raw Rules JSON defining the strategy (Alliance, MMR windows, regions, etc.)
     Rules rules = 2;
+
+    // Monotonic tick identifier; used for server logs and idempotence advisory.
     uint64 tickId = 3;
   }
   oneof request_type {
-    MakeMatchesParameters parameters = 1;
-    BackfillTicket backfill_ticket = 2;
-    Ticket ticket = 3;
+    MakeMatchesParameters parameters = 1; // sent exactly once
+    BackfillTicket backfill_ticket = 2; // sent 0..N times; all tickets MUST share the same match_pool
+    Ticket ticket = 3; // sent 0..N times; all tickets MUST share the same match_pool
   }
 }
 
 message BackfillResponse {
-  BackfillProposal backfill_proposal = 1;
+  BackfillProposal backfill_proposal = 1; // Proposal built from BackfillMatches to update an ongoing session
 }
 
+// BackfillTicket represent ticket that created by ongoing session
 message BackfillTicket {
   message Team {
     repeated string user_ids = 1;
     repeated Party parties = 2;
-    string team_id = 3;
+    string team_id = 3;   // UUID (no hyphens)
   }
   message PartialMatch {
-    repeated Ticket tickets = 1;
-    repeated Team teams = 2;
-    repeated string region_preferences = 3;
-    google.protobuf.Struct match_attributes = 4;
-    bool backfill = 5;
-    string server_name = 6;
-    string client_version = 7;
+    repeated Ticket tickets = 1; // All tickets that were matched together
+    repeated Team teams = 2; // Team assignments for the matched players of the current session
+    repeated string region_preferences = 3; // Preferred regions for this match (typically one item: the region where the DS is running)
+    google.protobuf.Struct match_attributes = 4; // Custom attributes of the session
+    bool backfill = 5; // False for complete matches; true if more players are desired
+    string server_name = 6; // DS server name, can be used for directing the match session to the local DS
+    string client_version = 7; // Specific game version that the DS supports
   }
-  string ticket_id = 1;
+  string ticket_id = 1; // backfill ticket ID
   string match_pool = 2;
   google.protobuf.Timestamp   CreatedAt = 3;
   PartialMatch partial_match = 4;
