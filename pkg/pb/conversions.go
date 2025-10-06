@@ -1,4 +1,4 @@
-// Copyright (c) 2023 AccelByte Inc. All Rights Reserved.
+// Copyright (c) 2023-2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -6,6 +6,7 @@ package matchfunction
 
 import (
 	"encoding/json"
+	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
@@ -52,8 +53,6 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 				log.Errorf("failed to create new proto struct for player attributes")
 			}
 			return &Ticket_PlayerData{
-				state:      protoimpl.MessageState{},
-				sizeCache:  0,
 				PlayerId:   playerdata.IDToString(p.PlayerID),
 				Attributes: playerAttrs,
 			}
@@ -420,25 +419,46 @@ func toProtoPlayerData(p playerdata.PlayerData) *Ticket_PlayerData {
 
 // ProtoBackfillProposalToMatchfunctionBackfillProposal will convert a proto backfill proposal to a matchmaker backfill proposal.
 func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.BackfillProposal) *BackfillProposal {
+	log := logrus.WithField("function", "MatchfunctionBackfillProposalToProtoBackfillProposal")
+
+	pbAttributes, err := structpb.NewStruct(match.Attributes)
+	if err != nil {
+		log.Errorf("value match attributes : %v error : %s", match.Attributes, err.Error())
+		log.Errorf("error on structpb for match attributes")
+	}
 	return &BackfillProposal{
 		BackfillTicketId: match.BackfillTicketID,
 		CreatedAt:        timestamppb.New(match.CreatedAt),
 		AddedTickets: pie.Map(match.AddedTickets, func(t matchmaker.Ticket) *Ticket {
+			pbTicketAttributes, err := structpb.NewStruct(t.TicketAttributes)
+			if err != nil {
+				log.Errorf("value match attributes : %v error : %s", match.Attributes, err.Error())
+				log.Errorf("error on structpb for match attributes")
+			}
 			return &Ticket{
 				TicketId:         t.TicketID,
 				MatchPool:        t.MatchPool,
 				CreatedAt:        timestamppb.New(t.CreatedAt),
 				Players:          pie.Map(t.Players, toProtoPlayerData),
-				TicketAttributes: nil,
-				Latencies:        nil,
-				PartySessionId:   "",
-				Namespace:        "",
+				TicketAttributes: pbTicketAttributes,
+				Latencies:        t.Latencies,
+				PartySessionId:   t.PartySessionID,
+				Namespace:        t.Namespace,
 			}
 		}),
-		ProposedTeams:  nil,
-		ProposalId:     "",
-		MatchPool:      "",
-		MatchSessionId: "",
+		ProposedTeams: pie.Map(match.ProposedTeams, func(b matchmaker.Team) *BackfillProposal_Team {
+			return &BackfillProposal_Team{
+				UserIds: pie.Map(b.UserIDs, func(pid playerdata.ID) string { return string(pid) }),
+				Parties: pie.Map(b.Parties, func(party matchmaker.Party) *Party {
+					return &Party{PartyId: party.PartyID, UserIds: party.UserIDs}
+				}),
+				TeamId: common.GenerateUUID(),
+			}
+		}),
+		ProposalId:     common.GenerateUUID(),
+		MatchPool:      match.MatchPool,
+		MatchSessionId: match.MatchSessionID,
+		Attributes:     pbAttributes,
 	}
 }
 

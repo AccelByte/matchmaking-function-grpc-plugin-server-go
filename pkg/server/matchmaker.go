@@ -284,14 +284,17 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 			})
 
 			log.Info("Send backfill proposal!")
+			proposedAttributes := backfillTicket.PartialMatch.MatchAttributes
+			proposedAttributes["generatedID"] = common.GenerateUUID()
 			results <- matchmaker.BackfillProposal{
 				BackfillTicketID: backfillTicket.TicketID,
 				CreatedAt:        time.Time{},
 				AddedTickets:     []matchmaker.Ticket{ticket},
 				ProposedTeams:    proposedTeam,
-				ProposalID:       "",
+				ProposalID:       common.GenerateUUID(),
 				MatchPool:        backfillTicket.MatchPool,
 				MatchSessionID:   backfillTicket.MatchSessionID,
+				Attributes:       proposedAttributes,
 			}
 
 			if len(unmatchedTickets) == 0 {

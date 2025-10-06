@@ -40,13 +40,14 @@ type BackfillProposal struct {
 	ProposalID       string
 	MatchPool        string
 	MatchSessionID   string
+	Attributes       map[string]interface{}
 }
 
 // Team is a set of players that have been matched onto the same team.
 type Team struct {
 	UserIDs []playerdata.ID
 	Parties []Party
-	TeamID string
+	TeamID  string
 }
 
 type Party struct {

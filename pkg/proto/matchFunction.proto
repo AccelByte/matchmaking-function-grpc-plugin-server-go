@@ -136,6 +136,7 @@ message BackfillProposal {
   string proposal_id = 5;  // UUID (no hyphens)
   string match_pool = 6;
   string match_session_id = 7; // The session ID of the match being updated.
+  google.protobuf.Struct attributes = 8; // Attributes for the session that can be used for backfill proposed
 }
 
 // Backfill Make Matches
