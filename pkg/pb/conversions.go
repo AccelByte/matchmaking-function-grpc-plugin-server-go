@@ -420,6 +420,28 @@ func toProtoPlayerData(p playerdata.PlayerData) *Ticket_PlayerData {
 
 // ProtoBackfillProposalToMatchfunctionBackfillProposal will convert a proto backfill proposal to a matchmaker backfill proposal.
 func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.BackfillProposal) *BackfillProposal {
+	team := []*BackfillProposal_Team{}
+	for _, data := range match.ProposedTeams {
+		users := []string{}
+		for _, user := range data.UserIDs {
+			users = append(users, string(user))
+		}
+
+		parties := []*Party{}
+		for _, party := range data.Parties {
+			parties = append(parties, &Party{
+				PartyId: party.PartyID,
+				UserIds: party.UserIDs,
+			})
+		}
+
+		team = append(team, &BackfillProposal_Team{
+			UserIds: users,
+			Parties: parties,
+			TeamId:  data.TeamID,
+		})
+	}
+
 	return &BackfillProposal{
 		BackfillTicketId: match.BackfillTicketID,
 		CreatedAt:        timestamppb.New(match.CreatedAt),
@@ -435,10 +457,10 @@ func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.Backf
 				Namespace:        "",
 			}
 		}),
-		ProposedTeams:  nil,
-		ProposalId:     "",
-		MatchPool:      "",
-		MatchSessionId: "",
+		ProposedTeams:  team,
+		ProposalId:     match.ProposalID,
+		MatchPool:      match.MatchPool,
+		MatchSessionId: match.MatchSessionID,
 	}
 }
 
