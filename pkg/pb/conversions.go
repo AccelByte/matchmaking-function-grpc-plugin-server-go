@@ -6,7 +6,6 @@ package matchfunction
 
 import (
 	"encoding/json"
-	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
@@ -426,6 +425,28 @@ func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.Backf
 		log.Errorf("value match attributes : %v error : %s", match.Attributes, err.Error())
 		log.Errorf("error on structpb for match attributes")
 	}
+	team := []*BackfillProposal_Team{}
+	for _, data := range match.ProposedTeams {
+		users := []string{}
+		for _, user := range data.UserIDs {
+			users = append(users, string(user))
+		}
+
+		parties := []*Party{}
+		for _, party := range data.Parties {
+			parties = append(parties, &Party{
+				PartyId: party.PartyID,
+				UserIds: party.UserIDs,
+			})
+		}
+
+		team = append(team, &BackfillProposal_Team{
+			UserIds: users,
+			Parties: parties,
+			TeamId:  data.TeamID,
+		})
+	}
+
 	return &BackfillProposal{
 		BackfillTicketId: match.BackfillTicketID,
 		CreatedAt:        timestamppb.New(match.CreatedAt),
@@ -446,16 +467,8 @@ func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.Backf
 				Namespace:        t.Namespace,
 			}
 		}),
-		ProposedTeams: pie.Map(match.ProposedTeams, func(b matchmaker.Team) *BackfillProposal_Team {
-			return &BackfillProposal_Team{
-				UserIds: pie.Map(b.UserIDs, func(pid playerdata.ID) string { return string(pid) }),
-				Parties: pie.Map(b.Parties, func(party matchmaker.Party) *Party {
-					return &Party{PartyId: party.PartyID, UserIds: party.UserIDs}
-				}),
-				TeamId: common.GenerateUUID(),
-			}
-		}),
-		ProposalId:     common.GenerateUUID(),
+		ProposedTeams:  team,
+		ProposalId:     match.ProposalID,
 		MatchPool:      match.MatchPool,
 		MatchSessionId: match.MatchSessionID,
 		Attributes:     pbAttributes,
