@@ -2,38 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Go: Debug Server",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/main.go",
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "LOG_LEVEL": "info",
-        "OTEL_SERVICE_NAME": "MatchmakingFunctionGrpcPluginServerGo",
-        "PLUGIN_GRPC_SERVER_AUTH_ENABLED": "false"
-      },
-      "args": []
-    },
-    {
-      "name": "Go: Run Server (no debug)",
+      "name": "Debug: Service",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/main.go",
+      "program": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceFolder}",
-      "env": {
-        "LOG_LEVEL": "info",
-        "OTEL_SERVICE_NAME": "MatchmakingFunctionGrpcPluginServerGo",
-        "PLUGIN_GRPC_SERVER_AUTH_ENABLED": "false"
-      },
-      "args": []
-    },
-    {
-      "name": "Go: Attach to Process",
-      "type": "go",
-      "request": "attach",
-      "processId": "${command:pickProcess}"
+      "console": "integratedTerminal"
     }
   ]
 }
