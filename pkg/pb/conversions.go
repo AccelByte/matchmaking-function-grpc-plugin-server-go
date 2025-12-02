@@ -60,6 +60,7 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 		Latencies:        ticket.Latencies,
 		PartySessionId:   ticket.PartySessionID,
 		Namespace:        ticket.Namespace,
+		ExcludedSessions: ticket.ExcludedSessions,
 	}
 }
 
@@ -88,6 +89,7 @@ func ProtoTicketToMatchfunctionTicket(ticket *Ticket) matchmaker.Ticket {
 		Latencies:        ticket.Latencies,
 		PartySessionID:   ticket.PartySessionId,
 		Namespace:        ticket.Namespace,
+		ExcludedSessions: ticket.ExcludedSessions,
 	}
 }
 
@@ -136,6 +138,7 @@ func ProtoPartialMatchToMatchfunctionMatch(match *BackfillTicket_PartialMatch) m
 				Latencies:        m.Latencies,
 				PartySessionID:   m.PartySessionId,
 				Namespace:        m.Namespace,
+				ExcludedSessions: m.ExcludedSessions,
 			}
 		}),
 		Teams:            protoBackfillTicketTeamToMatch(match.Teams),
@@ -170,6 +173,7 @@ func ProtoMatchToMatchfunctionMatch(match *Match) matchmaker.Match {
 				Latencies:        m.Latencies,
 				PartySessionID:   m.PartySessionId,
 				Namespace:        m.Namespace,
+				ExcludedSessions: m.ExcludedSessions,
 			}
 		}),
 		Teams:                        protoMatchTeamToMatch(match.Teams),
@@ -265,6 +269,7 @@ func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposa
 				Latencies:        m.Latencies,
 				PartySessionID:   m.PartySessionId,
 				Namespace:        m.Namespace,
+				ExcludedSessions: m.ExcludedSessions,
 			}
 		}),
 		ProposedTeams: pie.Map(match.ProposedTeams, func(team *BackfillProposal_Team) matchmaker.Team {
@@ -362,6 +367,7 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 			Latencies:        t.Latencies,
 			PartySessionId:   t.PartySessionID,
 			Namespace:        t.Namespace,
+			ExcludedSessions: t.ExcludedSessions,
 		}
 	})
 	return &BackfillTicket{
@@ -465,6 +471,7 @@ func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.Backf
 				Latencies:        t.Latencies,
 				PartySessionId:   t.PartySessionID,
 				Namespace:        t.Namespace,
+				ExcludedSessions: t.ExcludedSessions,
 			}
 		}),
 		ProposedTeams:  team,

@@ -11,13 +11,14 @@
 package matchfunction
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -747,6 +748,7 @@ type Ticket struct {
 	Latencies        map[string]int64       `protobuf:"bytes,6,rep,name=latencies,proto3" json:"latencies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // Map of AWS region to player latencies in ms
 	PartySessionId   string                 `protobuf:"bytes,7,opt,name=party_session_id,json=partySessionId,proto3" json:"party_session_id,omitempty"`                                          // If present, this is a party ticket. All players MUST be assigned as a unit.
 	Namespace        string                 `protobuf:"bytes,8,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ExcludedSessions []string               `protobuf:"bytes,9,rep,name=excluded_sessions,json=excludedSessions,proto3" json:"excluded_sessions,omitempty"` // A collection of past game session IDs that the user has chosen not to be matched with again.
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -835,6 +837,13 @@ func (x *Ticket) GetNamespace() string {
 		return x.Namespace
 	}
 	return ""
+}
+
+func (x *Ticket) GetExcludedSessions() []string {
+	if x != nil {
+		return x.ExcludedSessions
+	}
+	return nil
 }
 
 // Backfill
@@ -1670,7 +1679,7 @@ const file_matchFunction_proto_rawDesc = "" +
 	"deployment\x18\x02 \x01(\tR\n" +
 	"deployment\x12\x1d\n" +
 	"\n" +
-	"claim_keys\x18\x03 \x03(\tR\tclaimKeys\"\xda\x04\n" +
+	"claim_keys\x18\x03 \x03(\tR\tclaimKeys\"\x87\x05\n" +
 	"\x06Ticket\x12\x1b\n" +
 	"\tticket_id\x18\x01 \x01(\tR\bticketId\x12\x1d\n" +
 	"\n" +
@@ -1680,7 +1689,8 @@ const file_matchFunction_proto_rawDesc = "" +
 	"\x11ticket_attributes\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x10ticketAttributes\x12X\n" +
 	"\tlatencies\x18\x06 \x03(\v2:.accelbyte.matchmaking.matchfunction.Ticket.LatenciesEntryR\tlatencies\x12(\n" +
 	"\x10party_session_id\x18\a \x01(\tR\x0epartySessionId\x12\x1c\n" +
-	"\tnamespace\x18\b \x01(\tR\tnamespace\x1ab\n" +
+	"\tnamespace\x18\b \x01(\tR\tnamespace\x12+\n" +
+	"\x11excluded_sessions\x18\t \x03(\tR\x10excludedSessions\x1ab\n" +
 	"\n" +
 	"PlayerData\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x127\n" +

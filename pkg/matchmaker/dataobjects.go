@@ -20,6 +20,7 @@ type Ticket struct {
 	Players          []playerdata.PlayerData
 	TicketAttributes map[string]interface{}
 	Latencies        map[string]int64
+	ExcludedSessions []string
 }
 
 // BackfillTicket represents a match result that needs additional players.

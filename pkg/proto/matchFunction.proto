@@ -120,6 +120,7 @@ message Ticket {
   map<string, int64> latencies = 6; // Map of AWS region to player latencies in ms
   string party_session_id = 7;  // If present, this is a party ticket. All players MUST be assigned as a unit.
   string namespace = 8;
+  repeated string excluded_sessions = 9; // A collection of past game session IDs that the user has chosen not to be matched with again.
 }
 
 // Backfill

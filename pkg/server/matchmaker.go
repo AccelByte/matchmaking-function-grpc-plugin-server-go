@@ -6,6 +6,7 @@ package server
 
 import (
 	"encoding/json"
+	"slices"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -275,6 +276,13 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 		for i, backfillTicket = range unmatchedBackfillTickets {
 			ticket := unmatchedTickets[0]
 			unmatchedTickets = unmatchedTickets[1:]
+
+			if ticket.ExcludedSessions != nil && slices.Contains(ticket.ExcludedSessions, backfillTicket.MatchSessionID) {
+				log.WithField("ticketID", ticket.TicketID).
+					WithField("sessionID", backfillTicket.MatchSessionID).
+					Info("skip backfilling ticket to previous session")
+				continue
+			}
 
 			proposedTeam := backfillTicket.PartialMatch.Teams
 			proposedTeam = append(proposedTeam, matchmaker.Team{
