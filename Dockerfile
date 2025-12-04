@@ -10,17 +10,6 @@ FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS proto-builder
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set the value for the target OS and architecture.
-ARG HOST_OS
-ARG TARGETOS
-ARG TARGETARCH
-ARG GOOS=$TARGETOS
-ARG GOARCH=$TARGETARCH
-
-ENV GOROOT=/usr/local/go
-ENV GOPATH=/go
-ENV PATH=$GOPATH/bin/${TARGETOS}_${TARGETARCH}:$GOPATH/bin:$GOROOT/bin:$PATH
-
 ARG PROTOC_VERSION=21.9
 ARG GO_VERSION=1.24.10
 
@@ -46,12 +35,6 @@ RUN apt-get update \
         aarch64) echo "arm64" ;; \
         *) echo "amd64" ;; \
        esac) \
-    && OS_SUFFIX=$(case "${HOST_OS:-$(uname -s)}" in \
-        Linux) echo "linux" ;; \
-        Darwin) echo "darwin" ;; \
-        CYGWIN*|MINGW*|MSYS*) echo "windows" ;; \
-        *) echo "linux" ;; \
-        esac) \
     #
     # Install Protocol Buffers compiler
     && wget -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH_SUFFIX}.zip \
@@ -69,12 +52,17 @@ RUN apt-get update \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory.
-WORKDIR /build
+# Set up Go environment
+ENV GOROOT=/usr/local/go
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 # Install protoc Go tools and plugins
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Set working directory
+WORKDIR /build
 
 # Copy proto sources and generator script
 COPY proto.sh .
@@ -84,37 +72,33 @@ COPY pkg/proto/ pkg/proto/
 RUN chmod +x proto.sh && \
     ./proto.sh
 
-
-
 # ----------------------------------------
-# Stage 2: Builder
+# Stage 2: gRPC Server Builder
 # ----------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.22 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24 AS builder
 
-# Set the value for the target OS and architecture.
 ARG TARGETOS
 ARG TARGETARCH
 
-# Set the value for GOCACHE and GOMODCACHE.
-ARG GOCACHE=/tmp/build-cache/go/cache
-ARG GOMODCACHE=/tmp/build-cache/go/modcache
+ARG GOOS=$TARGETOS
+ARG GOARCH=$TARGETARCH
+ARG CGO_ENABLED=0
 
-# Set working directory.
+# Set working directory
 WORKDIR /build
 
-# Copy and download the dependencies for application.
+# Copy and download the dependencies for application
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy application code.
+# Copy application code
 COPY . .
 
-# Copy generated protobuf files from stage 1.
+# Copy generated protobuf files from stage 1
 COPY --from=proto-builder /build/pkg/pb pkg/pb
 
-# Build the Go application binary for the target OS and architecture.
-RUN env GOOS=$TARGETOS GOARCH=$TARGETARCH go build -modcacherw -o matchmaking-function-grpc-plugin-server-go_$TARGETOS-$TARGETARCH
-
+# Build the Go application binary for the target OS and architecture
+RUN go build -v -modcacherw -o /output/$TARGETOS/$TARGETARCH/matchmaking-function-grpc-plugin-server-go .
 
 # ----------------------------------------
 # Stage 3: Runtime Container
@@ -128,14 +112,14 @@ ARG TARGETARCH
 # Set working directory.
 WORKDIR /app
 
-# Copy build from stage 2.
-COPY --from=builder /build/matchmaking-function-grpc-plugin-server-go_$TARGETOS-$TARGETARCH matchmaking-function-grpc-plugin-server-go
+# Copy build
+COPY --from=builder /output/$TARGETOS/$TARGETARCH/matchmaking-function-grpc-plugin-server-go matchmaking-function-grpc-plugin-server-go
 
-# Plugin Arch gRPC Server Port.
+# Plugin Arch gRPC Server Port
 EXPOSE 6565
 
-# Prometheus /metrics Web Server Port.
+# Prometheus /metrics Web Server Port
 EXPOSE 8080
 
-# Entrypoint.
+# Entrypoint
 CMD [ "/app/matchmaking-function-grpc-plugin-server-go" ]

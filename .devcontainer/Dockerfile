@@ -89,9 +89,15 @@ RUN mkdir -p /workspace && chown -R $USERNAME:$USERNAME /workspace \
 # Switch to non-root user
 USER $USERNAME
 
+# Install Go Language Server (required by Go extension)
+RUN go install -v golang.org/x/tools/gopls@latest
+
+# Install Go Debugger
+RUN go install -v github.com/go-delve/delve/cmd/dlv@latest
+
 # Install protoc Go tools and plugins
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
-    && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+RUN go install -v google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+    && go install -v google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog
