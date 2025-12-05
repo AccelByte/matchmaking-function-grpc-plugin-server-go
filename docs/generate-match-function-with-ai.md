@@ -141,7 +141,7 @@ This version:
 
 ## Why Use AI?
 
-- **Speed**: Go from proto to working server in minutes.  
+- **Speed**: Generate a working server implementation from proto files in minutes.  
 - **Correctness**: AI respects the streaming order and contract.  
 - **Flexibility**: Quickly adapt to new rules (latency, MMR, cross-region).  
 - **Iteration**: Each change is just a new prompt away.  
