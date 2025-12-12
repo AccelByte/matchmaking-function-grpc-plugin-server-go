@@ -5,7 +5,6 @@
 package common
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -14,8 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/sirupsen/logrus"
 )
 
 func GetEnv(key, fallback string) string {
@@ -61,20 +58,6 @@ func GenerateUUID() string {
 	id, _ := uuid.NewRandom()
 
 	return strings.ReplaceAll(id.String(), "-", "")
-}
-
-// LogJSONFormatter is printing the data in log
-func LogJSONFormatter(data interface{}) string {
-	response, err := json.Marshal(data)
-	if err != nil {
-		logrus.Errorf("failed to marshal json.")
-
-		return ""
-	} else {
-		logrus.SetFormatter(&logrus.JSONFormatter{PrettyPrint: false})
-
-		return string(response)
-	}
 }
 
 func getUUID() string {

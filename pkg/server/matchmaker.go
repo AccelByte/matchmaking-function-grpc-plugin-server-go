@@ -6,12 +6,12 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"time"
 
 	"matchmaking-function-grpc-plugin-server-go/pkg/common"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
@@ -43,7 +43,7 @@ func (b MatchMaker) EnrichTicket(scope *common.Scope, matchTicket matchmaker.Tic
 			"enrichedNumber": float64(20),
 		}
 		matchTicket.TicketAttributes = enrichMap
-		scope.Log.Infof("EnrichedTicket Attributes: %+v", matchTicket.TicketAttributes)
+		scope.Log.Info("EnrichedTicket Attributes", "ticketAttributes", matchTicket.TicketAttributes)
 	}
 
 	return matchTicket, nil
@@ -51,7 +51,7 @@ func (b MatchMaker) EnrichTicket(scope *common.Scope, matchTicket matchmaker.Tic
 
 // GetStatCodes returns the string slice of the stat codes in matchrules
 func (b MatchMaker) GetStatCodes(scope *common.Scope, matchRules interface{}) []string {
-	scope.Log.Infof("MATCHMAKER: stat codes: %s", []string{})
+	scope.Log.Info("MATCHMAKER: stat codes", "codes", []string{})
 
 	return []string{}
 }
@@ -82,13 +82,13 @@ func (b MatchMaker) RulesFromJSON(scope *common.Scope, jsonRules string) (interf
 // MakeMatches iterates over all the match tickets and matches them based on the buildMatch function
 func (b MatchMaker) MakeMatches(scope *common.Scope, ticketProvider TicketProvider, matchRules interface{}) <-chan matchmaker.Match {
 	scope.Log.Info("MATCHMAKER: make matches")
-	log := scope.Log.WithField("method", "MATCHMAKER.MakeMatches")
+	log := scope.Log.With("method", "MATCHMAKER.MakeMatches")
 	results := make(chan matchmaker.Match)
 	ctx := scope.Ctx
 
 	rule, ok := matchRules.(GameRules)
 	if !ok {
-		log.Errorf("unexpected game rule type %T", matchRules)
+		log.Error("unexpected game rule type", "type", fmt.Sprintf("%T", matchRules))
 
 		return nil
 	}
@@ -105,7 +105,7 @@ func (b MatchMaker) MakeMatches(scope *common.Scope, ticketProvider TicketProvid
 
 					return
 				}
-				scope.Log.Infof("MATCHMAKER: got a ticket: %s", ticket.TicketID)
+				scope.Log.Info("MATCHMAKER: got a ticket", "ticketID", ticket.TicketID)
 				unmatchedTickets = buildMatch(scope, ticket, unmatchedTickets, rule, results)
 
 			case <-ctx.Done():
@@ -186,7 +186,9 @@ func buildMatch(scope *common.Scope, ticket matchmaker.Ticket, unmatchedTickets 
 		copy(match.Tickets, unmatchedTickets)
 		scope.Log.Info("MATCHMAKER: sending to results channel")
 		results <- match
-		scope.Log.Infof("MATCHMAKER: reducing unmatched tickets %d to %d", len(unmatchedTickets), len(unmatchedTickets)-numPlayers)
+		scope.Log.Info("MATCHMAKER: reducing unmatched tickets",
+			"from", len(unmatchedTickets),
+			"to", len(unmatchedTickets)-numPlayers)
 		unmatchedTickets = unmatchedTickets[numPlayers:]
 	}
 
@@ -199,12 +201,12 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 	results := make(chan matchmaker.BackfillProposal)
 	ctx := scope.Ctx
 
-	scope.Log.WithField("method", "MatchMaker.BackfillMatches")
+	scope.Log.With("method", "MatchMaker.BackfillMatches")
 	scope.Log.Info("start")
 
 	rule, ok := matchRules.(GameRules)
 	if !ok {
-		scope.Log.Errorf("unexpected game rule type %T", matchRules)
+		scope.Log.Error("unexpected game rule type", "type", fmt.Sprintf("%T", matchRules))
 
 		return nil
 	}
@@ -232,7 +234,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 
 					continue
 				}
-				scope.Log.WithField("ticketId", ticket.TicketID).Infof("got a match ticket")
+				scope.Log.Info("got a match ticket", "ticketId", ticket.TicketID)
 				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(scope, &ticket, nil, unmatchedTickets, unmatchedBackfillTickets, rule, results)
 			case backfillTicket, ok := <-nextBackfillTicket:
 				if !ok {
@@ -241,7 +243,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 
 					continue
 				}
-				scope.Log.WithField("ticketId", backfillTicket.TicketID).Infof("got a backfill ticket")
+				scope.Log.Info("got a backfill ticket", "ticketId", backfillTicket.TicketID)
 				unmatchedTickets, unmatchedBackfillTickets = buildBackfillMatch(scope, nil, &backfillTicket, unmatchedTickets, unmatchedBackfillTickets, rule, results)
 			case <-ctx.Done():
 				scope.Log.Info("CTX Done triggered")
@@ -256,7 +258,7 @@ func (b MatchMaker) BackfillMatches(scope *common.Scope, ticketProvider TicketPr
 
 // buildBackfillMatch is responsible for building matches from the slice of match tickets and feeding them to the match channel
 func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBackfillTicket *matchmaker.BackfillTicket, unmatchedTickets []matchmaker.Ticket, unmatchedBackfillTickets []matchmaker.BackfillTicket, rule GameRules, results chan matchmaker.BackfillProposal) ([]matchmaker.Ticket, []matchmaker.BackfillTicket) {
-	log := scope.Log.WithField("method", "MATCHMAKER.buildBackfillMatch")
+	log := scope.Log.With("method", "MATCHMAKER.buildBackfillMatch")
 
 	if newTicket != nil {
 		unmatchedTickets = append(unmatchedTickets, *newTicket)
@@ -265,9 +267,9 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 		unmatchedBackfillTickets = append(unmatchedBackfillTickets, *newBackfillTicket)
 	}
 
-	log.WithField("numBackfill", len(unmatchedBackfillTickets)).
-		WithField("numTicket", len(unmatchedTickets)).
-		Info("buildBackfillMatch")
+	log.Info("buildBackfillMatch",
+		"numBackfill", len(unmatchedBackfillTickets),
+		"numTicket", len(unmatchedTickets))
 
 	if len(unmatchedBackfillTickets) > 0 && len(unmatchedTickets) > 0 {
 		log.Info("I have enough tickets to backfill!")
@@ -278,9 +280,9 @@ func buildBackfillMatch(scope *common.Scope, newTicket *matchmaker.Ticket, newBa
 			unmatchedTickets = unmatchedTickets[1:]
 
 			if ticket.ExcludedSessions != nil && slices.Contains(ticket.ExcludedSessions, backfillTicket.MatchSessionID) {
-				log.WithField("ticketID", ticket.TicketID).
-					WithField("sessionID", backfillTicket.MatchSessionID).
-					Info("skip backfilling ticket to previous session")
+				log.Info("skip backfilling ticket to previous session",
+					"ticketID", ticket.TicketID,
+					"sessionID", backfillTicket.MatchSessionID)
 				continue
 			}
 

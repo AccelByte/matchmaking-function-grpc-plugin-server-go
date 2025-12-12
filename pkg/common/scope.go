@@ -6,8 +6,7 @@ package common
 
 import (
 	"context"
-
-	"github.com/sirupsen/logrus"
+	"log/slog"
 
 	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -30,7 +29,7 @@ func ChildScopeFromRemoteScope(ctx context.Context, name string) *Scope {
 		Ctx:     tracerCtx,
 		TraceID: traceID,
 		span:    span,
-		Log:     logrus.WithField(traceIdLogField, traceID),
+		Log:     slog.Default().With(traceIdLogField, traceID),
 	}
 }
 
@@ -46,7 +45,7 @@ func NewRootScope(rootCtx context.Context, name string, abTraceID string) *Scope
 		Ctx:     ctx,
 		TraceID: abTraceID,
 		span:    span,
-		Log:     logrus.WithField(traceIdLogField, abTraceID),
+		Log:     slog.Default().With(traceIdLogField, abTraceID),
 	}
 
 	return scope
@@ -57,7 +56,7 @@ type Scope struct {
 	Ctx     context.Context
 	TraceID string
 	span    oteltrace.Span
-	Log     *logrus.Entry
+	Log     *slog.Logger
 }
 
 // Finish finishes current scope

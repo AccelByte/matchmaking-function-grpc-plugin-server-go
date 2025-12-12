@@ -26,10 +26,11 @@ import (
 	sdkAuth "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/utils/auth"
 	promgrpc "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
 
 	"google.golang.org/grpc"
@@ -57,8 +58,23 @@ const (
 
 var (
 	serviceName = common.GetEnv("OTEL_SERVICE_NAME", "MatchmakingFunctionGrpcPluginServerGoDocker")
-	logLevelStr = common.GetEnv("LOG_LEVEL", logrus.InfoLevel.String())
+	logLevelStr = common.GetEnv("LOG_LEVEL", "info")
 )
+
+func parseSlogLevel(levelStr string) slog.Level {
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error", "fatal", "panic":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
 
 func main() {
 	go func() {
@@ -69,14 +85,18 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logrus.Infof("starting app server.")
+	// Parse log level from environment variable
+	slogLevel := parseSlogLevel(logLevelStr)
 
-	logrusLevel, err := logrus.ParseLevel(logLevelStr)
-	if err != nil {
-		logrusLevel = logrus.InfoLevel
+	// Create JSON handler for structured logging
+	opts := &slog.HandlerOptions{
+		Level: slogLevel,
 	}
-	logrusLogger := logrus.New()
-	logrusLogger.SetLevel(logrusLevel)
+	handler := slog.NewJSONHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+	slog.SetDefault(logger) // Set as default logger for the application
+
+	logger.Info("starting app server")
 
 	loggingOptions := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall, logging.PayloadReceived, logging.PayloadSent),
@@ -94,11 +114,11 @@ func main() {
 	srvMetrics := promgrpc.NewServerMetrics()
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
 		srvMetrics.UnaryServerInterceptor(),
-		logging.UnaryServerInterceptor(common.InterceptorLogger(logrusLogger), loggingOptions...),
+		logging.UnaryServerInterceptor(common.InterceptorLogger(logger), loggingOptions...),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		srvMetrics.StreamServerInterceptor(),
-		logging.StreamServerInterceptor(common.InterceptorLogger(logrusLogger), loggingOptions...),
+		logging.StreamServerInterceptor(common.InterceptorLogger(logger), loggingOptions...),
 	}
 
 	// Preparing the IAM authorization
@@ -118,12 +138,12 @@ func main() {
 		common.Validator = common.NewTokenValidator(oauthService, time.Duration(refreshInterval)*time.Second, true)
 		err := common.Validator.Initialize(ctx)
 		if err != nil {
-			logrus.Infof(err.Error())
+			logger.Info("initialization error", "error", err)
 		}
 
 		unaryServerInterceptors = append(unaryServerInterceptors, common.UnaryAuthServerIntercept)
 		streamServerInterceptors = append(streamServerInterceptors, common.StreamAuthServerIntercept)
-		logrus.Infof("added auth interceptors")
+		logger.Info("added auth interceptors")
 	}
 
 	// Create gRPC Server
@@ -141,7 +161,7 @@ func main() {
 
 	// Enable gRPC Reflection
 	reflection.Register(grpcServer)
-	logrus.Infof("gRPC reflection enabled")
+	logger.Info("gRPC reflection enabled")
 
 	// Enable gRPC Health Check
 	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
@@ -157,35 +177,41 @@ func main() {
 
 	go func() {
 		http.Handle(metricsEndpoint, promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}))
-		logrus.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil))
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil); err != nil {
+			logger.Error("failed to serve metrics", "error", err)
+			os.Exit(1)
+		}
 	}()
-	logrus.Printf("prometheus metrics served at :8080/metrics")
+	logger.Info("prometheus metrics served at :8080/metrics")
 
-	logrus.Infof("listening to grpc port.")
+	logger.Info("listening to grpc port")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
-		logrus.Fatalf("failed to listen: %v", err)
+		logger.Error("failed to listen", "error", err)
+		os.Exit(1)
 
 		return
 	}
 
-	logrus.Printf("gRPC server listening at %v", lis.Addr())
+	logger.Info("gRPC server listening", "address", lis.Addr())
 
-	logrus.Infof("listening...")
+	logger.Info("listening...")
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			logrus.Fatalf("failed to serve: %v", err)
+			logger.Error("failed to serve", "error", err)
+			os.Exit(1)
 
 			return
 		}
 	}()
 
-	logrus.Infof("starting init provider.")
+	logger.Info("starting init provider")
 
 	// Save Tracer Provider
 	tracerProvider, err := common.NewTracerProvider(serviceName, environment, id)
 	if err != nil {
-		logrus.Fatalf("failed to create tracer provider: %v", err)
+		logger.Error("failed to create tracer provider", "error", err)
+		os.Exit(1)
 
 		return
 	}
@@ -204,7 +230,8 @@ func main() {
 	// Cleanly shutdown and flush telemetry when the application exits.
 	defer func(ctx context.Context) {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			logrus.Fatal(err)
+			logger.Error("failed to shutdown tracer provider", "error", err)
+			os.Exit(1)
 		}
 	}(ctx)
 
@@ -213,5 +240,5 @@ func main() {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	<-ctx.Done()
-	logrus.Infof("signal received")
+	logger.Info("signal received")
 }

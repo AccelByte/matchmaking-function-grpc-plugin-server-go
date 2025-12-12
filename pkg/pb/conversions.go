@@ -6,31 +6,33 @@ package matchfunction
 
 import (
 	"encoding/json"
+	"log/slog"
 	"matchmaking-function-grpc-plugin-server-go/pkg/matchmaker"
 	"matchmaking-function-grpc-plugin-server-go/pkg/playerdata"
 
 	"github.com/elliotchance/pie/v2"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/runtime/protoimpl"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
-	log := logrus.WithField("function", "MatchfunctionTicketToProtoTicket")
+	log := slog.Default().With("function", "MatchfunctionTicketToProtoTicket")
 
 	// convert ticket attributes to proto struct
 	var err error
 	ticket.TicketAttributes, err = convertAttribute(ticket.TicketAttributes)
 	if err != nil {
-		log.Errorf("value ticket attributes marshal : %v error : %s", ticket.TicketAttributes, err.Error())
-		log.Errorf("error on convertAttribute for ticket attributes")
+		log.Error("error on convertAttribute for ticket attributes",
+			"value", ticket.TicketAttributes,
+			"error", err)
 	}
 
 	ticketAttrs, err := structpb.NewStruct(ticket.TicketAttributes)
 	if err != nil {
-		log.Errorf("value ticket attributes : %v error : %s", ticket.TicketAttributes, err.Error())
-		log.Errorf("error on structpb for ticket attributes")
+		log.Error("error on structpb for ticket attributes",
+			"value", ticket.TicketAttributes,
+			"error", err)
 	}
 
 	return &Ticket{
@@ -43,13 +45,15 @@ func MatchfunctionTicketToProtoTicket(ticket matchmaker.Ticket) *Ticket {
 		Players: pie.Map(ticket.Players, func(p playerdata.PlayerData) *Ticket_PlayerData {
 			p.Attributes, err = convertAttribute(p.Attributes)
 			if err != nil {
-				log.Errorf("value player attributes marshal : %v error : %s", p.Attributes, err.Error())
-				log.Errorf("error on convertAttribute for player attributes")
+				log.Error("error on convertAttribute for player attributes",
+					"value", p.Attributes,
+					"error", err)
 			}
 			playerAttrs, paErr := structpb.NewStruct(p.Attributes)
 			if paErr != nil {
-				log.Errorf("value player attributes : %v error : %s", p.Attributes, paErr.Error())
-				log.Errorf("failed to create new proto struct for player attributes")
+				log.Error("failed to create new proto struct for player attributes",
+					"value", p.Attributes,
+					"error", paErr)
 			}
 			return &Ticket_PlayerData{
 				PlayerId:   playerdata.IDToString(p.PlayerID),
@@ -208,18 +212,20 @@ func protoMatchTeamToMatch(protoTeams []*Match_Team) []matchmaker.Team {
 }
 
 func MatchfunctionMatchToProtoMatch(match matchmaker.Match) *Match {
-	log := logrus.WithField("function", "MatchfunctionMatchToProtoMatch")
+	log := slog.Default().With("function", "MatchfunctionMatchToProtoMatch")
 
 	var err error
 	match.MatchAttributes, err = convertAttribute(match.MatchAttributes)
 	if err != nil {
-		log.Errorf("value match attributes marshal : %v error : %s", match.MatchAttributes, err.Error())
-		log.Errorf("error on convertAttribute for match attributes")
+		log.Error("error on convertAttribute for match attributes",
+			"value", match.MatchAttributes,
+			"error", err)
 	}
 	matchAttrs, mErr := structpb.NewStruct(match.MatchAttributes)
 	if mErr != nil {
-		log.Errorf("value match attributes : %v error : %s", match.MatchAttributes, mErr.Error())
-		log.Errorf("error on structpb for match attributes")
+		log.Error("error on structpb for match attributes",
+			"value", match.MatchAttributes,
+			"error", mErr)
 	}
 	return &Match{
 		Tickets: pie.Map(match.Tickets, func(ticket matchmaker.Ticket) *Ticket {
@@ -293,19 +299,21 @@ func ProtoBackfillProposalToMatchfunctionBackfillProposal(match *BackfillProposa
 }
 
 func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.BackfillTicket) *BackfillTicket {
-	log := logrus.WithField("function", "MatchfunctionBackfillTicketToProtoBackfillTicket")
+	log := slog.Default().With("function", "MatchfunctionBackfillTicketToProtoBackfillTicket")
 	match := backfillTicket.PartialMatch
 	var err error
 	match.MatchAttributes, err = convertAttribute(match.MatchAttributes)
 	if err != nil {
-		log.Errorf("value match attributes marshal : %v error : %s", match.MatchAttributes, err.Error())
-		log.Errorf("error on convertAttribute for match attributes")
+		log.Error("error on convertAttribute for match attributes",
+			"value", match.MatchAttributes,
+			"error", err)
 	}
 	// convert ticket attributes to proto struct
 	ticketAttrs, err := structpb.NewStruct(match.MatchAttributes)
 	if err != nil {
-		log.Errorf("value match attributes : %v error : %s", match.MatchAttributes, err.Error())
-		log.Errorf("error on structpb for ticket attributes")
+		log.Error("error on structpb for ticket attributes",
+			"value", match.MatchAttributes,
+			"error", err)
 	}
 	var backfillTeams []*BackfillTicket_Team
 	for _, team := range match.Teams {
@@ -328,26 +336,30 @@ func MatchfunctionBackfillTicketToProtoBackfillTicket(backfillTicket matchmaker.
 	tickets := pie.Map(match.Tickets, func(t matchmaker.Ticket) *Ticket {
 		t.TicketAttributes, err = convertAttribute(t.TicketAttributes)
 		if err != nil {
-			log.Errorf("value ticket attributes marshal : %v error : %s", t.TicketAttributes, err.Error())
-			log.Errorf("error on convert Attribute ticket attributes")
+			log.Error("error on convert Attribute ticket attributes",
+				"value", t.TicketAttributes,
+				"error", err)
 		}
 
 		attributes, err := structpb.NewStruct(t.TicketAttributes)
 		if err != nil {
-			log.Errorf("value ticket attributes : %v error : %s", t.TicketAttributes, err.Error())
-			log.Errorf("error on structpb for ticket attributes")
+			log.Error("error on structpb for ticket attributes",
+				"value", t.TicketAttributes,
+				"error", err)
 		}
 		playerData := pie.Map(t.Players, func(p playerdata.PlayerData) *Ticket_PlayerData {
 			var err error
 			p.Attributes, err = convertAttribute(p.Attributes)
 			if err != nil {
-				log.WithField("function", "MatchfunctionBackfillTicketToProtoBackfillTicket").Errorf("value player attributes marshal : %v error : %s", p.Attributes, err.Error())
-				log.WithField("function", "MatchfunctionBackfillTicketToProtoBackfillTicket").Errorf("error on convertAttribute for player attributes")
+				log.Error("error on convertAttribute for player attributes",
+					"value", p.Attributes,
+					"error", err)
 			}
 			playerAttrs, paErr := structpb.NewStruct(p.Attributes)
 			if paErr != nil {
-				logrus.Errorf("value player attributes : %v error : %s", p.Attributes, paErr.Error())
-				logrus.Errorf("failed to create new proto struct for player attributes")
+				log.Error("failed to create new proto struct for player attributes",
+					"value", p.Attributes,
+					"error", paErr)
 			}
 			return &Ticket_PlayerData{
 				state:      protoimpl.MessageState{},
@@ -411,7 +423,7 @@ func PlayerDataToParties(players []playerdata.PlayerData) []matchmaker.Party {
 func toProtoPlayerData(p playerdata.PlayerData) *Ticket_PlayerData {
 	playerAttrs, paErr := structpb.NewStruct(p.Attributes)
 	if paErr != nil {
-		logrus.Errorf("failed to create new proto struct for playerdata attributes")
+		slog.Default().Error("failed to create new proto struct for playerdata attributes", "error", paErr)
 	}
 
 	return &Ticket_PlayerData{
@@ -424,12 +436,13 @@ func toProtoPlayerData(p playerdata.PlayerData) *Ticket_PlayerData {
 
 // ProtoBackfillProposalToMatchfunctionBackfillProposal will convert a proto backfill proposal to a matchmaker backfill proposal.
 func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.BackfillProposal) *BackfillProposal {
-	log := logrus.WithField("function", "MatchfunctionBackfillProposalToProtoBackfillProposal")
+	log := slog.Default().With("function", "MatchfunctionBackfillProposalToProtoBackfillProposal")
 
 	pbAttributes, err := structpb.NewStruct(match.Attributes)
 	if err != nil {
-		log.Errorf("value match attributes : %v error : %s", match.Attributes, err.Error())
-		log.Errorf("error on structpb for match attributes")
+		log.Error("error on structpb for match attributes",
+			"value", match.Attributes,
+			"error", err)
 	}
 	team := []*BackfillProposal_Team{}
 	for _, data := range match.ProposedTeams {
@@ -459,8 +472,9 @@ func MatchfunctionBackfillProposalToProtoBackfillProposal(match matchmaker.Backf
 		AddedTickets: pie.Map(match.AddedTickets, func(t matchmaker.Ticket) *Ticket {
 			pbTicketAttributes, err := structpb.NewStruct(t.TicketAttributes)
 			if err != nil {
-				log.Errorf("value match attributes : %v error : %s", match.Attributes, err.Error())
-				log.Errorf("error on structpb for match attributes")
+				log.Error("error on structpb for match attributes",
+					"value", match.Attributes,
+					"error", err)
 			}
 			return &Ticket{
 				TicketId:         t.TicketID,
