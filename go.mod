@@ -3,7 +3,7 @@ module matchmaking-function-grpc-plugin-server-go
 go 1.24.3
 
 require (
-	github.com/AccelByte/accelbyte-go-sdk v0.80.0
+	github.com/AccelByte/accelbyte-go-sdk v0.85.0
 	github.com/AccelByte/bloom v0.0.0-20180915202807-98c052463922 // indirect
 	github.com/AccelByte/go-jose v2.1.4+incompatible
 	github.com/elliotchance/pie/v2 v2.4.0
