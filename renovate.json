@@ -4,6 +4,10 @@
     {
       "matchPackageNames": ["alpine"],
       "allowedVersions": "<=3.22"
+    },
+    {
+      "matchPackageNames": ["ubuntu"],
+      "allowedVersions": "<=22.04"
     }
   ]
 }
