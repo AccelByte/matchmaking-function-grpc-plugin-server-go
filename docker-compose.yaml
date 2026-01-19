@@ -11,7 +11,6 @@ services:
       - AB_NAMESPACE=${AB_NAMESPACE}
       - PLUGIN_GRPC_SERVER_AUTH_ENABLED
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans   # Zipkin
-      - OTEL_SERVICE_NAME=MatchmakingFunctionGrpcPluginServerGo
       - LOG_LEVEL=debug
       # - GODEBUG=http2debug=2
       # - GRPC_GO_LOG_VERBOSITY_LEVEL=99    # Enable to debug gRPC

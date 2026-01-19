@@ -13,7 +13,6 @@ import (
 
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os/signal"
 	"runtime"
 	"strings"
@@ -57,7 +56,7 @@ const (
 )
 
 var (
-	serviceName = common.GetEnv("OTEL_SERVICE_NAME", "MatchmakingFunctionGrpcPluginServerGoDocker")
+	serviceName = "extend-app-matchmaking-func"
 	logLevelStr = common.GetEnv("LOG_LEVEL", "info")
 )
 
@@ -208,6 +207,9 @@ func main() {
 	logger.Info("starting init provider")
 
 	// Save Tracer Provider
+	if val := common.GetEnv("OTEL_SERVICE_NAME", ""); val != "" {
+		serviceName = "extend-app-mm-" + strings.ToLower(val)
+	}
 	tracerProvider, err := common.NewTracerProvider(serviceName, environment, id)
 	if err != nil {
 		logger.Error("failed to create tracer provider", "error", err)
