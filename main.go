@@ -120,6 +120,34 @@ func main() {
 		logging.StreamServerInterceptor(common.InterceptorLogger(logger), loggingOptions...),
 	}
 
+	// Set Tracer Provider (must be before SDK client setup so tracing propagates on SDK calls)
+	if val := common.GetEnv("OTEL_SERVICE_NAME", ""); val != "" {
+		serviceName = "extend-app-mm-" + strings.ToLower(val)
+	}
+	tracerProvider, err := common.NewTracerProvider(serviceName, environment, id)
+	if err != nil {
+		logger.Error("failed to create tracer provider", "error", err)
+		os.Exit(1)
+	}
+	otel.SetTracerProvider(tracerProvider)
+	defer func(ctx context.Context) {
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			logger.Error("failed to shutdown tracer provider", "error", err)
+			os.Exit(1)
+		}
+	}(ctx)
+
+	// Set Text Map Propagator
+	p := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		p,
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	// Set tracing HTTP transport globally so all outgoing HTTP calls are traced
+	http.DefaultTransport = common.NewTracingRoundTripper()
+
 	// Preparing the IAM authorization
 	var tokenRepo repository.TokenRepository = sdkAuth.DefaultTokenRepositoryImpl()
 	var configRepo repository.ConfigRepository = sdkAuth.DefaultConfigRepositoryImpl()
@@ -203,39 +231,6 @@ func main() {
 			return
 		}
 	}()
-
-	logger.Info("starting init provider")
-
-	// Save Tracer Provider
-	if val := common.GetEnv("OTEL_SERVICE_NAME", ""); val != "" {
-		serviceName = "extend-app-mm-" + strings.ToLower(val)
-	}
-	tracerProvider, err := common.NewTracerProvider(serviceName, environment, id)
-	if err != nil {
-		logger.Error("failed to create tracer provider", "error", err)
-		os.Exit(1)
-
-		return
-	}
-
-	// Register our TracerProvider as the global so any imported
-	// instrumentation in the future will default to using it.
-	otel.SetTracerProvider(tracerProvider)
-	// Register the B3 propagator globally.
-	p := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		p,
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	))
-
-	// Cleanly shutdown and flush telemetry when the application exits.
-	defer func(ctx context.Context) {
-		if err := tracerProvider.Shutdown(ctx); err != nil {
-			logger.Error("failed to shutdown tracer provider", "error", err)
-			os.Exit(1)
-		}
-	}(ctx)
 
 	flag.Parse()
 
